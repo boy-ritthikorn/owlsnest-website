@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>หลังบ้าน · Owl's Nest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0b; --panel:#15151a; --panel-2:#1c1c22;
+  --line:rgba(200,164,92,.22); --gold:#c8a45c; --gold-lt:#e7d5a8;
+  --text:#e9e5dd; --muted:#9b9389; --danger:#c9584f; --ok:#5fa76a;
+  --sans:'Noto Sans Thai','Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;padding-bottom:88px}
+h1,h2,h3{margin:0;font-weight:500}
+button{font-family:inherit;font-size:14px;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);padding:8px 12px}
+button:hover{border-color:var(--gold)}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--text);background:#0e0e11;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 11px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+.wrap{max-width:920px;margin:0 auto;padding:0 14px}
+
+/* header */
+header{position:sticky;top:0;z-index:30;background:rgba(10,10,11,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.hrow{display:flex;align-items:center;gap:10px;height:56px}
+.brand{font-size:16px;color:var(--gold-lt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand b{font-weight:600}
+.hrow .sp{flex:1}
+.hrow a{color:var(--muted);text-decoration:none;font-size:13px;border:1px solid var(--line);padding:7px 11px;border-radius:8px;white-space:nowrap}
+.hrow a:hover{color:var(--gold-lt);border-color:var(--gold)}
+
+/* tabs */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{white-space:nowrap;background:transparent;color:var(--muted);border-color:transparent}
+.tabs button.on{background:var(--panel);color:var(--gold-lt);border-color:var(--line)}
+
+/* cards */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.card>.hd h3{font-size:16px;color:var(--gold-lt);flex:1}
+.lead{color:var(--muted);font-size:13.5px;margin:2px 0 14px}
+.lbl{color:var(--muted);font-size:12px;margin-bottom:4px;display:block}
+.grp{border-left:2px solid var(--line);padding-left:12px;margin:14px 0}
+
+/* item rows */
+.row{display:grid;gap:6px;padding:9px 0;border-top:1px dashed rgba(255,255,255,.08)}
+.row:first-of-type{border-top:0}
+.row .top{display:flex;gap:6px}
+.row .top input{flex:1}
+.row .bot{display:flex;gap:6px}
+.row .bot input:first-child{flex:1}
+.row .bot input.price{width:96px;flex:none;text-align:right;color:var(--gold-lt)}
+.x{flex:none;width:38px;padding:0;color:var(--muted);font-size:17px;line-height:1}
+.x:hover{color:var(--danger);border-color:var(--danger)}
+.add{width:100%;margin-top:8px;border-style:dashed;color:var(--muted)}
+
+/* dishes */
+.dish{display:flex;gap:12px;align-items:flex-start}
+.dish img{width:110px;height:73px;object-fit:cover;border-radius:8px;flex:none}
+.dish .f{flex:1;display:grid;gap:6px;min-width:0}
+
+/* save bar */
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(10,10,11,.97);border-top:1px solid var(--line);padding:12px 0;backdrop-filter:blur(8px)}
+.savebar .wrap{display:flex;align-items:center;gap:10px}
+.savebar .st{flex:1;font-size:13px;color:var(--muted)}
+.savebar .st.dirty{color:var(--gold-lt)}
+.savebar .st.ok{color:var(--ok)}
+.savebar .st.err{color:var(--danger)}
+#save{background:var(--gold);color:#141310;border-color:var(--gold);font-weight:600;padding:11px 22px}
+#save:disabled{opacity:.45;cursor:default}
+
+/* login */
+.login{max-width:340px;margin:16vh auto;padding:0 16px;text-align:center}
+.login h1{font-size:20px;color:var(--gold-lt);margin-bottom:6px}
+.login p{color:var(--muted);font-size:13.5px;margin:0 0 20px}
+.login input{margin-bottom:10px;text-align:center}
+.login button{width:100%;background:var(--gold);color:#141310;border-color:var(--gold);font-weight:600;padding:11px}
+.err{color:var(--danger);font-size:13px;min-height:20px}
+.hide{display:none!important}
+@media(min-width:640px){
+  .row{grid-template-columns:1fr 1fr 110px 38px;align-items:center;gap:8px}
+  .row .top,.row .bot{display:contents}
+  .row .bot input.price{width:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="login hide">
+  <h1>หลังบ้าน Owl's Nest</h1>
+  <p>ใส่รหัสผ่านเพื่อแก้ข้อมูลเว็บไซต์</p>
+  <input type="password" id="pw" placeholder="รหัสผ่าน" autocomplete="current-password">
+  <button id="dologin">เข้าสู่ระบบ</button>
+  <p class="err" id="loginerr"></p>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hide">
+  <header>
+    <div class="wrap">
+      <div class="hrow">
+        <div class="brand"><b>Owl's Nest</b> · หลังบ้าน</div>
+        <div class="sp"></div>
+        <a id="viewsite" href="#" target="_blank" rel="noopener">ดูเว็บจริง</a>
+      </div>
+      <div class="tabs" id="tabs"></div>
+    </div>
+  </header>
+  <main class="wrap" id="view"></main>
+</div>
+
+<div id="savebar" class="savebar hide">
+  <div class="wrap">
+    <div class="st" id="status">ยังไม่มีการแก้ไข</div>
+    <button id="save" disabled>บันทึกและอัปเว็บ</button>
+  </div>
+</div>
+
+<script>
+var D = null, IMAGES = [], SITE = '', dirty = false;
+var TABS = [
+  ['music',     'ตารางดนตรี'],
+  ['signature', 'จานเด่น'],
+  ['wine',      'ไวน์'],
+  ['menu',      'เมนูอาหาร'],
+  ['drinks',    'เครื่องดื่ม'],
+  ['settings',  'ตั้งค่า']
+];
+var tab = 'music';
+
+/* ---------- utils ---------- */
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function $(id){ return document.getElementById(id); }
+function get(p){ return p.split('.').reduce(function(o,k){ return o[k]; }, D); }
+function setp(p, v){ var k = p.split('.'), last = k.pop(); k.reduce(function(o,x){ return o[x]; }, D)[last] = v; }
+
+function markDirty(){
+  dirty = true;
+  $('save').disabled = false;
+  $('status').className = 'st dirty';
+  $('status').textContent = 'มีการแก้ไขที่ยังไม่ได้บันทึก';
+}
+window.addEventListener('beforeunload', function(e){ if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- input builders ---------- */
+function inp(path, ph, cls){
+  return '<input data-p="' + path + '" value="' + esc(get(path)) + '" placeholder="' + esc(ph || '') + '"' + (cls ? ' class="' + cls + '"' : '') + '>';
+}
+function del(path, label){
+  return '<button class="x" data-act="del" data-p="' + path + '" title="' + esc(label || 'ลบ') + '">✕</button>';
+}
+function addBtn(path, kind, label){
+  return '<button class="add" data-act="add" data-kind="' + kind + '" data-p="' + path + '">+ ' + esc(label) + '</button>';
+}
+
+/* one menu/drink/wine line: EN / TH / price */
+function itemRow(path, withTh){
+  return '<div class="row">' +
+    '<div class="top">' + inp(path + '.en', 'ชื่อเมนู (อังกฤษ)') + '</div>' +
+    '<div class="bot">' +
+      (withTh ? inp(path + '.th', 'ชื่อไทย') : '') +
+      inp(path + '.price', 'ราคา', 'price') +
+      del(path) +
+    '</div></div>';
+}
+
+/* ---------- tab renderers ---------- */
+var render = {};
+
+render.music = function(){
+  var h = '<p class="lead">แก้ชื่อวง เวลา หรือเพิ่ม/ลบวันได้ · เว็บจะแสดงตามลำดับนี้</p>';
+  D.music.forEach(function(d, i){
+    h += '<div class="card"><div class="hd"><h3>' + esc(d.en || 'วันใหม่') + '</h3>' + del('music.' + i, 'ลบวันนี้') + '</div>' +
+      '<span class="lbl">ชื่อวัน (อังกฤษ)</span>' + inp('music.' + i + '.en', 'Thursday') +
+      '<span class="lbl" style="margin-top:8px">ข้อความไทยใต้ชื่อวัน</span>' + inp('music.' + i + '.th', 'คืนวันพฤหัสบดี') +
+      '<span class="lbl" style="margin-top:14px">รอบการแสดง — ช่องบน = แนวเพลง · ช่องล่าง = เวลา</span>';
+    d.slots.forEach(function(s, j){
+      var p = 'music.' + i + '.slots.' + j;
+      h += '<div class="row"><div class="top">' + inp(p + '.genre', 'Country Folk Music') + '</div>' +
+        '<div class="bot">' + inp(p + '.time', '21:30 – 23:00') + del(p) + '</div></div>';
+    });
+    h += addBtn('music.' + i + '.slots', 'slot', 'เพิ่มรอบการแสดง') + '</div>';
+  });
+  return h + addBtn('music', 'day', 'เพิ่มวัน');
+};
+
+render.signature = function(){
+  var h = '<p class="lead">จานเด่นที่โชว์เป็นการ์ดรูปใหญ่บนหน้าแรก · แนะนำ 5 จาน</p>';
+  D.signature.forEach(function(d, i){
+    var p = 'signature.' + i;
+    var opts = IMAGES.map(function(f){
+      return '<option value="images/' + esc(f) + '"' + ('images/' + f === d.img ? ' selected' : '') + '>' + esc(f) + '</option>';
+    }).join('');
+    h += '<div class="card"><div class="dish">' +
+      '<img src="' + esc(SITE + d.img) + '" alt="">' +
+      '<div class="f">' +
+        '<span class="lbl">ชื่อเมนู</span>' + inp(p + '.en', 'Jamón Ibérico') +
+        '<span class="lbl">คำอธิบายไทย</span>' + inp(p + '.th', 'แฮมไอเบริโก นำเข้าจากสเปน') +
+        '<span class="lbl">ราคา (ใส่แค่ตัวเลข)</span>' + inp(p + '.price', '1,390', 'price') +
+        '<span class="lbl">รูปภาพ</span>' +
+        '<select data-p="' + p + '.img">' + opts + '</select>' +
+        '<span class="lbl">คำบรรยายรูป (Google ใช้อ่านว่ารูปนี้คืออะไร)</span>' + inp(p + '.alt', '') +
+      '</div>' + del(p, 'ลบจานนี้') + '</div></div>';
+  });
+  return h + addBtn('signature', 'dish', 'เพิ่มจานเด่น');
+};
+
+render.wine = function(){
+  var h = '<p class="lead">ราคาต่อขวด · ใส่เฉพาะตัวเลข เช่น 1,350</p>';
+  D.wine.categories.forEach(function(c, i){
+    var p = 'wine.categories.' + i;
+    h += '<div class="card"><div class="hd">' + inp(p + '.title', 'Red Wine · ไวน์แดง') + del(p, 'ลบหมวดนี้') + '</div>';
+    c.items.forEach(function(_, j){ h += itemRow(p + '.items.' + j, false); });
+    h += addBtn(p + '.items', 'item', 'เพิ่มไวน์') + '</div>';
+  });
+  h += addBtn('wine.categories', 'winecat', 'เพิ่มหมวดไวน์');
+  h += '<div class="card"><span class="lbl">ข้อความไวน์แบบแก้ว (ท้ายตาราง)</span>' + inp('wine.glass_note', '') + '</div>';
+  return h;
+};
+
+function columnsEditor(cols, base, addLabel){
+  var h = '';
+  cols.forEach(function(groups, ci){
+    var side = cols.length === 2 ? ['คอลัมน์ซ้าย', 'คอลัมน์ขวา'][ci] : 'คอลัมน์ที่ ' + (ci + 1);
+    h += '<div class="grp"><span class="lbl">' + side + '</span>';
+    groups.forEach(function(g, gi){
+      var gp = base + '.' + ci + '.' + gi;
+      if (g.heading !== '' || groups.length > 1) {
+        h += '<div class="hd" style="margin:10px 0 4px">' + inp(gp + '.heading', 'หัวข้อย่อย (เว้นว่างได้)') + del(gp, 'ลบหัวข้อนี้ทั้งกลุ่ม') + '</div>';
+      }
+      g.items.forEach(function(_, ii){ h += itemRow(gp + '.items.' + ii, true); });
+      h += addBtn(gp + '.items', 'item', addLabel);
+    });
+    h += addBtn(base + '.' + ci, 'group', 'เพิ่มหัวข้อย่อย') + '</div>';
+  });
+  return h;
+}
+
+render.menu = function(){
+  var h = '<p class="lead">แก้ชื่อเมนูและราคาได้ทุกช่อง · ราคาใส่เฉพาะตัวเลข เช่น 260</p>';
+  D.menu.forEach(function(b, i){
+    var p = 'menu.' + i;
+    h += '<div class="card"><div class="hd"><h3>' + esc(b.title) + '</h3></div>' +
+      '<div class="row"><div class="top">' + inp(p + '.title', 'ชื่อหมวด') + '</div>' +
+      '<div class="bot">' + inp(p + '.sub', 'คำอธิบายใต้หัวข้อ') + '</div></div>' +
+      '<span class="lbl" style="margin:10px 0 2px">แต่ละรายการ: ช่องบน = ชื่ออังกฤษ · ช่องล่างซ้าย = ชื่อไทย · ช่องขวา = ราคา</span>' + columnsEditor(b.columns, p + '.columns', 'เพิ่มเมนู') + '</div>';
+  });
+  return h;
+};
+
+render.drinks = function(){
+  return '<p class="lead">ค็อกเทล · สปาร์กลิง · เบียร์ · เหล้า · น้ำอัดลม</p>' +
+    '<div class="card">' + '<span class="lbl" style="margin:10px 0 2px">แต่ละรายการ: ช่องบน = ชื่ออังกฤษ · ช่องล่างซ้าย = ชื่อไทย · ช่องขวา = ราคา</span>' + columnsEditor(D.drinks, 'drinks', 'เพิ่มเครื่องดื่ม') + '</div>';
+};
+
+render.settings = function(){
+  return '<div class="card"><div class="hd"><h3>เปลี่ยนรหัสผ่าน</h3></div>' +
+    '<span class="lbl">รหัสผ่านเดิม</span><input type="password" id="pwold" autocomplete="current-password">' +
+    '<span class="lbl" style="margin-top:10px">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)</span><input type="password" id="pwnew" autocomplete="new-password">' +
+    '<button id="pwsave" style="margin-top:12px">บันทึกรหัสผ่านใหม่</button>' +
+    '<p class="err" id="pwerr"></p></div>' +
+    '<div class="card"><div class="hd"><h3>วิธีใช้</h3></div>' +
+    '<p class="lead" style="margin:0">แก้ข้อมูลในแท็บต่าง ๆ แล้วกดปุ่ม <b>บันทึกและอัปเว็บ</b> ด้านล่าง ระบบจะสร้างหน้าเว็บใหม่ให้ทันที ' +
+    'ข้อมูลเดิมถูกสำรองไว้อัตโนมัติทุกครั้งที่บันทึก (เก็บ 30 ครั้งล่าสุด) ถ้าแก้ผิดบอกผมได้ ย้อนกลับได้ทุกเมื่อ</p></div>' +
+    '<div class="card"><div class="hd"><h3>ออกจากระบบ</h3></div><button id="logout">ออกจากระบบ</button></div>';
+};
+
+/* ---------- paint ---------- */
+function paintTabs(){
+  $('tabs').innerHTML = TABS.map(function(t){
+    return '<button data-tab="' + t[0] + '"' + (t[0] === tab ? ' class="on"' : '') + '>' + esc(t[1]) + '</button>';
+  }).join('');
+}
+function paint(){
+  paintTabs();
+  $('view').innerHTML = render[tab]();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('input', function(e){
+  var p = e.target.getAttribute('data-p');
+  if (!p) return;
+  setp(p, e.target.value);
+  markDirty();
+});
+document.addEventListener('change', function(e){
+  if (e.target.tagName === 'SELECT' && e.target.getAttribute('data-p')) paint();
+});
+
+var BLANK = {
+  slot:    function(){ return { genre: '', time: '' }; },
+  day:     function(){ return { en: '', th: '', slots: [{ genre: '', time: '' }] }; },
+  item:    function(){ return { en: '', th: '', price: '' }; },
+  group:   function(){ return { heading: '', mt: 28, items: [{ en: '', th: '', price: '' }] }; },
+  winecat: function(){ return { mt: 36, title: '', items: [{ en: '', th: '', price: '' }] }; },
+  dish:    function(){ return { img: 'images/' + (IMAGES[0] || ''), alt: '', w: '1000', h: '666', en: '', th: '', price: '' }; }
+};
+
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('button');
+  if (!btn) return;
+
+  if (btn.dataset.tab) {
+    if (btn.dataset.tab !== tab) { tab = btn.dataset.tab; paint(); }
+    return;
+  }
+  if (btn.dataset.act === 'add') {
+    get(btn.dataset.p).push(BLANK[btn.dataset.kind]());
+    markDirty(); paint(); return;
+  }
+  if (btn.dataset.act === 'del') {
+    var k = btn.dataset.p.split('.'), idx = parseInt(k.pop(), 10);
+    var arr = k.reduce(function(o, x){ return o[x]; }, D);
+    if (arr.length === 1 && (tab === 'wine' || tab === 'menu' || tab === 'drinks') && k[k.length - 1] === 'items') {
+      alert('ต้องมีอย่างน้อย 1 รายการในกลุ่มนี้ ถ้าจะลบทั้งกลุ่มให้กดปุ่ม ✕ ที่หัวข้อแทน');
+      return;
+    }
+    if (!confirm('ลบรายการนี้ใช่ไหม?')) return;
+    arr.splice(idx, 1);
+    markDirty(); paint(); return;
+  }
+  if (btn.id === 'save') return doSave();
+  if (btn.id === 'logout') return post('logout', {}).then(function(){ location.reload(); });
+  if (btn.id === 'pwsave') return changePw();
+});
+
+/* ---------- api ---------- */
+function post(url, body){
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); });
+}
+
+function doSave(){
+  $('save').disabled = true;
+  $('status').className = 'st';
+  $('status').textContent = 'กำลังบันทึกและสร้างหน้าเว็บใหม่…';
+  post('save', { data: D }).then(function(r){
+    if (!r.ok) {
+      $('status').className = 'st err';
+      $('status').textContent = r.j.error || 'บันทึกไม่สำเร็จ';
+      $('save').disabled = false;
+      return;
+    }
+    dirty = false;
+    $('status').className = 'st ok';
+    $('status').textContent = '✓ บันทึกแล้ว เว็บอัปเดตเรียบร้อย';
+  }).catch(function(){
+    $('status').className = 'st err';
+    $('status').textContent = 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง';
+    $('save').disabled = false;
+  });
+}
+
+function changePw(){
+  var err = $('pwerr');
+  err.textContent = '';
+  post('password', { current: $('pwold').value, new: $('pwnew').value }).then(function(r){
+    if (!r.ok) { err.textContent = r.j.error || 'เปลี่ยนไม่สำเร็จ'; return; }
+    err.style.color = 'var(--ok)';
+    err.textContent = 'เปลี่ยนรหัสผ่านแล้ว';
+    $('pwold').value = ''; $('pwnew').value = '';
+  });
+}
+
+function boot(){
+  fetch('data').then(function(r){
+    if (r.status === 401) { $('login').classList.remove('hide'); $('pw').focus(); return null; }
+    return r.json();
+  }).then(function(j){
+    if (!j) return;
+    D = j.data; IMAGES = j.images; SITE = j.site_url;
+    $('viewsite').href = SITE;
+    $('app').classList.remove('hide');
+    $('savebar').classList.remove('hide');
+    paint();
+  });
+}
+
+$('dologin').addEventListener('click', function(){
+  post('login', { password: $('pw').value }).then(function(r){
+    if (!r.ok) { $('loginerr').textContent = r.j.error || 'เข้าสู่ระบบไม่สำเร็จ'; return; }
+    location.reload();
+  });
+});
+$('pw').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('dologin').click(); });
+
+boot();
+</script>
+</body>
+</html>

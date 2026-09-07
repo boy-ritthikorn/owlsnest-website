@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Checklist ตั้งค่า Google Business Profile — Owl's Nest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0d0f; --panel:#16161a; --panel2:#1d1d22;
+  --line:rgba(200,164,92,.2); --gold:#c8a45c; --gold-lt:#e7d5a8;
+  --text:#eceae5; --muted:#9d968c; --ok:#4caf7d;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:'Noto Sans Thai',system-ui,sans-serif;
+  font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  padding-bottom:80px;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+a{color:var(--gold)}
+
+/* progress bar */
+.top{
+  position:sticky;top:0;z-index:20;background:rgba(13,13,15,.96);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 0 10px;
+}
+.top .wrap{display:flex;align-items:center;gap:12px}
+.top b{font-size:14px;color:var(--gold-lt);white-space:nowrap}
+.bar{flex:1;height:6px;background:#26262c;border-radius:99px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
+.top .pct{font-size:13px;color:var(--muted);min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
+
+header.hero{padding:36px 0 26px;text-align:center;border-bottom:1px solid var(--line)}
+header.hero .kicker{font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
+header.hero h1{font-size:clamp(23px,5.5vw,31px);margin:12px 0 6px;font-weight:600;line-height:1.4}
+header.hero p{color:var(--muted);font-size:14.5px;margin:0}
+
+h2{
+  font-size:19px;font-weight:600;margin:44px 0 6px;color:var(--gold-lt);
+  padding-top:20px;border-top:1px solid var(--line);
+}
+h2 .n{
+  display:inline-block;width:27px;height:27px;line-height:27px;text-align:center;
+  background:var(--gold);color:#111;border-radius:50%;font-size:14px;
+  margin-right:9px;font-weight:700;vertical-align:2px;
+}
+.lead{color:var(--muted);font-size:14.5px;margin:4px 0 18px}
+
+/* checklist items */
+.chk{
+  display:flex;gap:13px;align-items:flex-start;
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:15px 16px;margin-bottom:10px;cursor:pointer;
+  transition:background .18s,opacity .18s;
+}
+.chk:active{background:var(--panel2)}
+.chk input{
+  appearance:none;-webkit-appearance:none;flex:0 0 22px;height:22px;margin:3px 0 0;
+  border:2px solid var(--gold);border-radius:5px;cursor:pointer;position:relative;background:transparent;
+}
+.chk input:checked{background:var(--ok);border-color:var(--ok)}
+.chk input:checked::after{
+  content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;
+  border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg);
+}
+.chk .body{flex:1;min-width:0}
+.chk .body > b{display:block;font-weight:500;font-size:15.5px;line-height:1.55}
+.chk .body small{display:block;color:var(--muted);font-size:13.5px;line-height:1.7;margin-top:4px}
+.chk .body small b{color:var(--gold-lt);font-weight:600}
+.chk.done .body > b{text-decoration:line-through;opacity:.45}
+.chk.done .body small{opacity:.4}
+
+/* copy blocks */
+.copy{
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+  padding:14px 15px;margin:10px 0 16px;
+}
+.copy .lbl{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.copy .val{
+  font-size:15px;line-height:1.8;word-break:break-word;white-space:pre-wrap;
+  background:#101014;border-radius:5px;padding:11px 12px;color:var(--text);
+}
+.copy button{
+  margin-top:10px;width:100%;padding:11px;border-radius:6px;cursor:pointer;
+  background:var(--gold);color:#111;border:0;font-family:inherit;
+  font-size:14px;font-weight:600;letter-spacing:.03em;
+}
+.copy button.copied{background:var(--ok);color:#fff}
+
+.note{
+  border-left:3px solid var(--gold);background:rgba(200,164,92,.07);
+  padding:13px 15px;margin:16px 0;border-radius:0 6px 6px 0;font-size:14.5px;
+}
+.note b{color:var(--gold-lt)}
+.warn{border-left-color:#e0a13a;background:rgba(224,161,58,.08)}
+
+.tag{
+  display:inline-block;background:var(--panel2);border:1px solid var(--line);
+  padding:3px 11px;border-radius:99px;font-size:13.5px;margin:3px 4px 3px 0;color:var(--gold-lt);
+}
+
+footer{margin-top:56px;padding:26px 0 10px;border-top:1px solid var(--line);text-align:center}
+footer p{color:#5f5a54;font-size:13px;margin:5px 0}
+
+.reset{
+  display:block;margin:26px auto 0;background:transparent;border:1px solid var(--line);
+  color:var(--muted);padding:10px 20px;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <b>ความคืบหน้า</b>
+    <div class="bar"><span id="pbar"></span></div>
+    <div class="pct" id="ppct">0%</div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Owl's Nest Bar &amp; Bistro</div>
+    <h1>Checklist ตั้งค่า<br>Google Business Profile</h1>
+    <p>ทำในมือถือได้เลย ประมาณ 20–30 นาที · กดติ๊กแล้วระบบจำให้</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="note">
+  <b>ทำไมต้องทำ:</b> คนที่ค้น "ร้านไวน์ ปากเกร็ด" ใน Google จะเห็น <b>กล่องแผนที่ 3 ร้าน</b> ขึ้นก่อนผลค้นหาเว็บเสมอ
+  ตัวที่ตัดสินว่าร้านเราจะติด 3 อันดับนั้นคือโปรไฟล์นี้ ไม่ใช่เว็บไซต์ — เว็บไซต์เป็นตัวเสริมให้ Google เชื่อว่าร้านมีตัวตนจริง
+</div>
+
+<div class="note warn">
+  <b>หมายเหตุ:</b> Google ปรับหน้าตาเมนูบ่อย ชื่อปุ่มที่เห็นจริงอาจไม่ตรงกับที่เขียนเป๊ะ ๆ
+  ให้ดูที่ <b>ความหมาย</b> ของแต่ละข้อเป็นหลัก ถ้าหาไม่เจอจริง ๆ ทักถามผมได้เลยครับ
+</div>
+
+<!-- 0 -->
+<h2><span class="n">0</span>เตรียมของก่อนเริ่ม</h2>
+<p class="lead">ใช้เวลา 2 นาที</p>
+
+<label class="chk"><input type="checkbox" data-k="p1"><span class="body">
+  <b>เปิดมือถือ แล้วล็อกอิน Google ด้วยอีเมลที่ผูกกับร้านไว้</b>
+  <small>คืออีเมลอีกอันที่บอยบอก ถ้าจำไม่ได้ว่าอันไหน ให้ลองทีละอัน — อันที่ถูกจะเห็นปุ่มแก้ไขโปรไฟล์ร้าน</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="p2"><span class="body">
+  <b>เตรียมรูปไว้ในมือถือ 10–15 รูป</b>
+  <small>รูปบรรยากาศร้าน รูปวงดนตรี รูปอาหาร รูปหน้าร้านตอนกลางคืน — เอาจาก Google Drive โฟลเดอร์เดียวกับที่ส่งผมได้เลย</small>
+</span></label>
+
+<!-- 1 -->
+<h2><span class="n">1</span>เข้าไปที่โปรไฟล์ร้าน</h2>
+<p class="lead">Google เลิกใช้แอป "Google My Business" แล้ว ตอนนี้แก้ผ่าน Google Search / Maps ตรง ๆ</p>
+
+<label class="chk"><input type="checkbox" data-k="a1"><span class="body">
+  <b>เปิด Google แล้วค้นคำว่า <span class="tag">my business</span> หรือค้นชื่อร้าน <span class="tag">Owl's Nest Bar Bistro ปากเกร็ด</span></b>
+  <small>ถ้าล็อกอินถูกอีเมล จะมีแถบเครื่องมือของเจ้าของร้านโผล่ขึ้นมาด้านบน (ปุ่มพวก แก้ไขโปรไฟล์ / โปรโมต / ลูกค้า)</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="a2"><span class="body">
+  <b>ถ้าไม่เห็นแถบนั้น ให้ลองอีกทางคือเข้า <span class="tag">google.com/business</span></b>
+  <small>ถ้ายังไม่เจอ แปลว่าอาจล็อกอินผิดอีเมล หรือร้านผูกอยู่กับบัญชีอื่น — บอกผมได้ ผมช่วยไล่ดู</small>
+</span></label>
+
+<!-- 2 -->
+<h2><span class="n">2</span>เช็กว่าเป็น "เจ้าของ" หรือแค่ "ผู้จัดการ"</h2>
+<p class="lead">สำคัญ เพราะบางอย่างเฉพาะเจ้าของเท่านั้นที่ทำได้</p>
+
+<label class="chk"><input type="checkbox" data-k="b1"><span class="body">
+  <b>เข้าเมนูผู้ใช้ / ผู้จัดการ (Managers) แล้วดูว่าชื่อบอยขึ้นว่าอะไร</b>
+  <small>ถ้าขึ้น <b>เจ้าของหลัก (Primary owner)</b> = ดีที่สุด · ถ้าขึ้น <b>ผู้จัดการ (Manager)</b> = ยังทำได้เกือบทุกอย่าง แต่ลบ/โอนร้านไม่ได้</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="b2"><span class="body">
+  <b>เช็กว่าร้าน "ยืนยันตัวตนแล้ว" (Verified) หรือยัง — ดูตรงไหน</b>
+  <small>ค้นชื่อร้านใน Google ตอนล็อกอินอีเมลร้าน แล้วดูแถบจัดการโปรไฟล์ที่ขึ้นมา<br>
+  · <b>ทางที่ 1</b> — มองหาไอคอน <b>โล่/เครื่องหมายถูก</b> หรือคำว่า <b>"ยืนยันแล้ว / Verified"</b> ข้างชื่อร้าน<br>
+  · <b>ทางที่ 2 (ชัดที่สุด)</b> — กด <b>เมนู 3 จุด → การตั้งค่าโปรไฟล์ธุรกิจ → ผู้ใช้และการยืนยัน</b> (Business Profile settings → Users and verification) จะบอกสถานะตรง ๆ<br>
+  · <b>ทางลัด</b> — ถ้ามีแถบสีเตือน <b>"ยืนยันตอนนี้ / Get verified"</b> หรือ <b>"ระงับชั่วคราว / Suspended"</b> ค้างอยู่ = <b>ยังไม่ยืนยัน</b> ถ้าไม่มีอะไรเตือนเลยและแก้ข้อมูลได้ปกติ = <b>ยืนยันแล้ว</b><br>
+  ถ้ายังไม่ยืนยัน Google มักให้ <b>ถ่ายวิดีโอร้าน</b> (เดินถ่ายหน้าร้าน ป้ายชื่อ ในร้าน และของที่พิสูจน์ว่าเป็นเจ้าของ เช่น ใบเสร็จ/ใบอนุญาต) รอผล 3–7 วัน — <b>ข้อนี้สำคัญที่สุด ถ้ายังไม่ยืนยัน ร้านจะไม่ค่อยขึ้นในผลค้นหา</b></small>
+</span></label>
+
+<!-- 3 -->
+<h2><span class="n">3</span>กรอกข้อมูลพื้นฐานให้ครบ</h2>
+<p class="lead">ข้อมูลด้านล่างก๊อปวางได้เลย กดปุ่มคัดลอก</p>
+
+<div class="copy">
+  <div class="lbl">ชื่อร้าน</div>
+  <div class="val" id="c1">Owl's Nest Bar &amp; Bistro</div>
+  <button data-c="c1">คัดลอกข้อความ</button>
+</div>
+
+<div class="copy">
+  <div class="lbl">ที่อยู่</div>
+  <div class="val" id="c2">58/2 ถนนหอการค้า ตำบลคลองข่อย อำเภอปากเกร็ด จังหวัดนนทบุรี 11120</div>
+  <button data-c="c2">คัดลอกข้อความ</button>
+</div>
+
+<div class="copy">
+  <div class="lbl">เบอร์โทร</div>
+  <div class="val" id="c3">090-964-6284</div>
+  <button data-c="c3">คัดลอกข้อความ</button>
+</div>
+
+<div class="copy">
+  <div class="lbl">เว็บไซต์ (ใช้ลิงก์นี้ไปก่อน เปลี่ยนได้เมื่อมี domain จริง)</div>
+  <div class="val" id="c4">https://newton-ritthikornkorjai.incomeinclick.in.th/owl/</div>
+  <button data-c="c4">คัดลอกข้อความ</button>
+</div>
+
+<div class="copy">
+  <div class="lbl">คำอธิบายร้าน (Description)</div>
+  <div class="val" id="c5">Owl's Nest Bar &amp; Bistro บาร์ไวน์และอาหารสเปนย่านปากเกร็ด นนทบุรี เปิดให้บริการตั้งแต่ปี 2020 คัดไวน์แดงและไวน์ขาวจากสเปนกว่า 17 ฉลาก ทั้งจาก Ribera del Duero, Rioja และ Navarra เสิร์ฟคู่อาหารสเปนหากินยาก อาทิ Jamon Iberico, Abanico Iberico ย่างเตาถ่าน, Iberico Croquettes และ Cuttlefish Al Ajillo พร้อมเมนูไทยและอาหารฝรั่งสำหรับทุกคนในโต๊ะ มีดนตรีสดทุกคืนวันพฤหัสบดี ศุกร์ และเสาร์ ในบรรยากาศอบอุ่นที่นั่งสบาย เหมาะทั้งนัดเพื่อน มื้อค่ำครอบครัว และเลี้ยงรับรองลูกค้า เปิดทุกวัน 17:00-24:00 น.</div>
+  <button data-c="c5">คัดลอกข้อความ</button>
+</div>
+
+<label class="chk"><input type="checkbox" data-k="c_name"><span class="body">
+  <b>ตรวจชื่อร้านให้ตรงกับป้ายหน้าร้านเป๊ะ ๆ</b>
+  <small>ห้ามใส่คำโฆษณาต่อท้าย เช่น "ร้านไวน์ดีที่สุดปากเกร็ด" — Google ลงโทษและอาจระงับโปรไฟล์</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="c_addr"><span class="body">
+  <b>ตรวจที่อยู่ว่าเลขที่แสดงเป็น <span class="tag">58/2</span> ไม่ใช่ "58" กับ "2" แยกกัน</b>
+  <small>ตอนนี้ข้อมูลในแผนที่ดูเหมือนบ้านเลขที่ถูกแยกเป็นสองส่วน ถ้าใช่ให้แก้ให้ถูก เพราะ Google ใช้ที่อยู่จับคู่กับเว็บไซต์</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="c_hours"><span class="body">
+  <b>ตั้งเวลาเปิด–ปิด: ทุกวัน 17:00 – 24:00 น.</b>
+  <small>ถ้าระบบไม่ยอมรับ 24:00 ให้ใส่ 00:00 ของวันถัดไป · อย่าลืมตั้งวันหยุดพิเศษด้วย (ปีใหม่ สงกรานต์ วันพระใหญ่ที่งดขายเหล้า)</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="c_web"><span class="body">
+  <b>ใส่ลิงก์เว็บไซต์และเบอร์โทร</b>
+  <small>เบอร์ต้องตรงกับที่อยู่บนเว็บและโปสเตอร์เป๊ะ ๆ Google เอาข้อมูล 3 อย่างนี้ (ชื่อ–ที่อยู่–เบอร์) ไปเทียบกันเพื่อยืนยันว่าร้านมีจริง</small>
+</span></label>
+
+<!-- 4 -->
+<h2><span class="n">4</span>หมวดหมู่ร้าน — ข้อนี้มีผลกับอันดับมากที่สุด</h2>
+<p class="lead">เลือกหมวดหลัก 1 อัน แล้วเพิ่มหมวดรองได้อีกหลายอัน</p>
+
+<label class="chk"><input type="checkbox" data-k="d1"><span class="body">
+  <b>หมวดหลัก (Primary): <span class="tag">บาร์ไวน์ / Wine bar</span></b>
+  <small>เลือกอันนี้เพราะเป็นจุดขายที่ชัดที่สุดและคู่แข่งในย่านน้อยกว่า "ร้านอาหาร" ทั่วไป — โอกาสติดอันดับสูงกว่า</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="d2"><span class="body">
+  <b>เพิ่มหมวดรอง (Additional) ให้ครบ</b>
+  <small>
+    <span class="tag">ร้านอาหารสเปน</span>
+    <span class="tag">บาร์</span>
+    <span class="tag">บิสโทร</span>
+    <span class="tag">ร้านทาปาส</span>
+    <span class="tag">สถานที่แสดงดนตรีสด</span><br>
+    ชื่อหมวดในระบบอาจเป็นภาษาอังกฤษ (Spanish restaurant, Bar, Bistro, Tapas bar, Live music venue) ให้พิมพ์คำค้นแล้วเลือกอันที่ใกล้ที่สุด
+  </small>
+</span></label>
+
+<!-- 5 -->
+<h2><span class="n">5</span>คุณสมบัติร้าน (Attributes)</h2>
+<p class="lead">คนใช้กรองหาร้านจากตรงนี้ ติ๊กให้ครบเท่าที่ร้านมีจริง</p>
+
+<label class="chk"><input type="checkbox" data-k="e1"><span class="body">
+  <b>ติ๊ก "ดนตรีสด (Live music)" ให้ได้</b>
+  <small>นี่คือจุดขายหลักของร้าน และเป็นตัวกรองที่คนหาบาร์ใช้บ่อย</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="e2"><span class="body">
+  <b>ติ๊กข้อที่เกี่ยวข้องอื่น ๆ</b>
+  <small>เสิร์ฟแอลกอฮอล์ · ไวน์ · ค็อกเทล · รับจองโต๊ะ · ที่จอดรถ · มีที่นั่งกลางแจ้ง (ถ้ามี) · เหมาะกับกลุ่ม · Wi-Fi · รับบัตรเครดิต · เข้าถึงด้วยรถเข็นได้ (ถ้าใช่)</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="e3"><span class="body">
+  <b>อย่าติ๊กสิ่งที่ร้านไม่มี</b>
+  <small>ลูกค้ามาแล้วไม่เจอ = รีวิว 1 ดาว เสียมากกว่าได้</small>
+</span></label>
+
+<!-- 6 -->
+<h2><span class="n">6</span>รูปภาพ</h2>
+<p class="lead">โปรไฟล์ที่มีรูปเยอะและอัปเดตบ่อย Google ดันขึ้นมากกว่า</p>
+
+<label class="chk"><input type="checkbox" data-k="f1"><span class="body">
+  <b>ตั้งรูปหน้าปก (Cover) เป็นรูปบรรยากาศร้านตอนมีดนตรีสด</b>
+  <small>ใช้รูปเดียวกับหน้าแรกเว็บได้เลย — รูปที่เห็นป้ายนีออน เปียโน และนักดนตรี</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="f2"><span class="body">
+  <b>ใส่โลโก้ร้าน (นกฮูกถือแก้วไวน์)</b>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="f3"><span class="body">
+  <b>อัปโหลดรูปแยกตามหมวดให้ครบ อย่างละ 3–5 รูป</b>
+  <small>ภายในร้าน · ภายนอก/หน้าร้านตอนกลางคืน · อาหาร · เครื่องดื่ม · บรรยากาศ/ทีมงาน · เมนู (ถ่ายป้ายเมนูก็ได้)</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="f4"><span class="body">
+  <b>ตั้งใจอัปรูปใหม่สัปดาห์ละ 2–3 รูป</b>
+  <small>เป็นสัญญาณกับ Google ว่าร้านยังเปิดและ active — ให้น้อง ๆ ในร้านถ่ายส่งมาแล้วอัปเลย</small>
+</span></label>
+
+<!-- 7 -->
+<h2><span class="n">7</span>ใส่เมนูและ "สินค้า"</h2>
+
+<label class="chk"><input type="checkbox" data-k="g1"><span class="body">
+  <b>ใส่ลิงก์เมนู ชี้ไปที่หน้าเมนูบนเว็บ</b>
+  <small><span class="tag">.../owl/#menu</span> — ดีกว่าอัปรูปเมนูอย่างเดียว เพราะ Google อ่านข้อความบนเว็บได้</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="g2"><span class="body">
+  <b>ถ้ามีช่องให้ใส่เมนูทีละรายการ ให้ใส่จานเด่น 5–8 จาน</b>
+  <small>Jamón Ibérico 1,390 · Lamb Shank 990 · Abanico Ibérico 1,290 · Cuttlefish Al Ajillo 490 · Iberico Croquettes 490 · Ebi Roll 240 · Pizza 380 · ไวน์แก้วละ 350</small>
+</span></label>
+
+<!-- 8 -->
+<h2><span class="n">8</span>โพสต์อัปเดตประจำสัปดาห์</h2>
+<p class="lead">อันนี้คนส่วนใหญ่ไม่ทำ = โอกาสของเรา ใช้เวลาสัปดาห์ละ 5 นาที</p>
+
+<div class="copy">
+  <div class="lbl">ตัวอย่างโพสต์ตารางดนตรี (ก๊อปไปใช้ได้เลย เปลี่ยนแค่วันที่)</div>
+  <div class="val" id="c6">🎵 ดนตรีสดสัปดาห์นี้ที่ Owl's Nest
+
+พฤหัสบดี · Country Folk · 21:30 – 23:00
+ศุกร์ · Pop 19:30 – 21:00 / Oldies by the Pianist 21:30 – 23:00
+เสาร์ · Blue Rock · 22:00 – 23:30
+
+เปิดทุกวัน 17:00 – 24:00 น.
+โทรจองโต๊ะ 090-964-6284</div>
+  <button data-c="c6">คัดลอกข้อความ</button>
+</div>
+
+<label class="chk"><input type="checkbox" data-k="h1"><span class="body">
+  <b>โพสต์ตารางดนตรีทุกต้นสัปดาห์ (จันทร์หรืออังคาร)</b>
+  <small>โพสต์ใน Google Business Profile จะขึ้นในผลค้นหาและในแผนที่ ช่วยให้คนที่ค้นเจอตัดสินใจมาได้เลย</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="h2"><span class="body">
+  <b>โพสต์เมนูใหม่ / ไวน์ตัวใหม่ / โปรโมชั่นเทศกาล เมื่อมี</b>
+</span></label>
+
+<!-- 9 -->
+<h2><span class="n">9</span>รีวิว — ตัวแปรอันดับ 1 ของการติด 3 อันดับแรก</h2>
+
+<label class="chk"><input type="checkbox" data-k="i1"><span class="body">
+  <b>เอา QR รีวิวที่ทำไว้แล้วไปวางบนโต๊ะ / ที่แคชเชียร์</b>
+  <small>ป้ายตั้งโต๊ะพร้อมพิมพ์อยู่แล้วที่ <a href="/review/" target="_blank">ลิงก์นี้</a> — สแกนแล้วเด้งเข้าหน้าเขียนรีวิวทันที ไม่ต้องค้นหาร้านเอง</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="i2"><span class="body">
+  <b>สอนน้อง ๆ ให้ชวนรีวิวตอนลูกค้าจ่ายเงิน</b>
+  <small>พูดสั้น ๆ ว่า "ถ้าชอบวันนี้ รบกวนสแกนรีวิวให้ร้านหน่อยนะคะ" — ห้ามแลกของ/ส่วนลดกับรีวิว Google ลบรีวิวและลงโทษร้าน</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="i3"><span class="body">
+  <b>ตอบรีวิว "ทุกอัน" ภายใน 1–2 วัน ทั้งดีและไม่ดี</b>
+  <small>Google นับการตอบรีวิวเป็นสัญญาณว่าร้าน active · รีวิวแย่ให้ตอบสุภาพ ขอโทษ บอกว่าจะปรับปรุงอะไร แล้วชวนคุยต่อทางโทรศัพท์ — คนอ่านคือลูกค้าคนถัดไป ไม่ใช่คนที่เขียน</small>
+</span></label>
+
+<!-- 10 -->
+<h2><span class="n">10</span>คำถามที่พบบ่อย (Q&amp;A)</h2>
+
+<label class="chk"><input type="checkbox" data-k="j1"><span class="body">
+  <b>ตั้งคำถามเองแล้วตอบเอง 4–5 ข้อ</b>
+  <small>ทำได้และไม่ผิดกติกา ตัวอย่าง: "มีดนตรีสดวันไหนบ้าง" · "ต้องจองโต๊ะไหม" · "มีที่จอดรถหรือเปล่า" · "มีอาหารสำหรับเด็กไหม" · "ไวน์แก้วละเท่าไหร่" — ตอบให้ครบ คนเห็นก่อนตัดสินใจมา</small>
+</span></label>
+
+<!-- 11 -->
+<h2><span class="n">11</span>ส่งกลับมาให้ผม 2 อย่าง</h2>
+
+<label class="chk"><input type="checkbox" data-k="k1"><span class="body">
+  <b>พิกัดร้าน (ตัวเลข 2 ชุด) — ✅ ได้แล้ว</b>
+  <small>บอยส่งมาแล้ว: <span class="tag">13.9446590, 100.4770487</span> ผมฝังลงในโค้ดเว็บเรียบร้อย ข้อนี้ติ๊กผ่านได้เลย</small>
+</span></label>
+
+<label class="chk"><input type="checkbox" data-k="k2"><span class="body">
+  <b>สถานะของบอยใน GBP — ✅ ครบแล้ว</b>
+  <small>บอยเป็น <b>เจ้าของหลัก</b> (ใช้อีเมลของร้าน) และร้าน <b>ยืนยันตัวตนแล้ว (Verified)</b> — เห็นเครื่องหมายถูกบนโล่สีฟ้า ข้อนี้ติ๊กผ่านได้เลย ข้ามไปทำขั้น 3–10 ได้ทันที</small>
+</span></label>
+
+<div class="note">
+  <b>ทำเสร็จแล้วจะเห็นผลเมื่อไหร่?</b> ปกติ 2–6 สัปดาห์ครับ Google ไม่ขยับอันดับทันที
+  สิ่งที่เร่งได้เร็วที่สุดคือ <b>จำนวนรีวิวใหม่</b> — ถ้าเก็บรีวิวได้เดือนละ 10–15 อันต่อเนื่อง จะเห็นความต่างชัดที่สุด
+</div>
+
+<button class="reset" id="reset">ล้างเครื่องหมายทั้งหมด</button>
+
+<footer>
+  <p>Owl's Nest Bar &amp; Bistro · เอกสารภายใน</p>
+  <p>อัปเดต 7 กันยายน 2569</p>
+</footer>
+
+</div>
+
+<script>
+var KEY = 'owlsnest-gbp-v1';
+var boxes = document.querySelectorAll('.chk input');
+
+function state(){
+  try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function save(s){
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e){}
+}
+function paint(){
+  var done = 0;
+  boxes.forEach(function(b){
+    b.closest('.chk').classList.toggle('done', b.checked);
+    if (b.checked) done++;
+  });
+  var pct = boxes.length ? Math.round(done / boxes.length * 100) : 0;
+  document.getElementById('pbar').style.width = pct + '%';
+  document.getElementById('ppct').textContent = pct + '%';
+}
+
+var s = state();
+boxes.forEach(function(b){
+  b.checked = !!s[b.dataset.k];
+  b.addEventListener('change', function(){
+    var cur = state();
+    cur[b.dataset.k] = b.checked;
+    save(cur);
+    paint();
+  });
+});
+paint();
+
+document.getElementById('reset').addEventListener('click', function(){
+  save({});
+  boxes.forEach(function(b){ b.checked = false; });
+  paint();
+});
+
+document.querySelectorAll('.copy button').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var txt = document.getElementById(btn.dataset.c).innerText;
+    function ok(){
+      btn.textContent = 'คัดลอกแล้ว ✓';
+      btn.classList.add('copied');
+      setTimeout(function(){
+        btn.textContent = 'คัดลอกข้อความ';
+        btn.classList.remove('copied');
+      }, 1600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(ok, fallback);
+    } else { fallback(); }
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); ok(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+});
+</script>
+
+</body>
+</html>

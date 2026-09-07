@@ -1,0 +1,15 @@
+# ความลับ — ห้ามขึ้น GitHub เด็ดขาด (salt / password hash / session secret ของหลังบ้าน)
+admin/config.json
+
+# ข้อมูลสำรองอัตโนมัติของหลังบ้าน สร้างใหม่เองทุกครั้งที่กดบันทึก
+admin/backups/
+
+# ไฟล์สำรองก่อนแก้ ไม่ต้องเก็บใน git เพราะ git เก็บประวัติให้อยู่แล้ว
+*.bak
+
+# รูปดิบ 100 ไฟล์จาก Google Drive (~28 MB) ต้นฉบับยังอยู่ใน Drive ของบอย
+# ถ้าต้องการดึงกลับมา ใช้ drive-src/list_folder.py
+drive-src/
+
+__pycache__/
+*.pyc
