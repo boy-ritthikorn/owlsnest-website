@@ -29,3 +29,5 @@ Source อยู่ที่ `/root/owlsnest-website/messenger-assistant/` แ�
 - Default model: `gpt-5.6-luna`
 
 ระบบจะรับข้อความจริงแล้ว แต่จะไม่สร้างร่างจนกว่าจะใส่ `OPENAI_API_KEY` ที่หน้า `/owl-assistant/settings`
+
+หากเข้า FileBrowser ไม่ได้ ให้สร้างลิงก์ตั้งรหัสหลังบ้านแบบใช้ครั้งเดียวด้วย `python3 create_setup_link.py` ลิงก์มีอายุ 60 นาทีและปิดทันทีหลังตั้งรหัสสำเร็จ

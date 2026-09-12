@@ -22,6 +22,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parent
 ENV_FILE = Path(os.environ.get("OWL_ASSISTANT_ENV", "/root/.secrets/owlsnest-messenger-assistant.env"))
+CREDENTIAL_NOTE = Path("/root/owlsnest-assistant-admin.txt")
 DB_FILE = ROOT / "data" / "assistant.db"
 KNOWLEDGE_FILE = ROOT / "knowledge.json"
 MUSIC_FILE = Path("/root/owlsnest-website/data.json")
@@ -243,6 +244,54 @@ def save_openai_key(api_key: str) -> None:
     CFG["OPENAI_API_KEY"] = api_key
 
 
+def replace_env_values(values: dict[str, str]) -> None:
+    lines = ENV_FILE.read_text(encoding="utf-8").splitlines() if ENV_FILE.exists() else []
+    updated = []
+    remaining = dict(values)
+    for line in lines:
+        key = line.split("=", 1)[0] if "=" in line else ""
+        if key in remaining:
+            updated.append(f"{key}='{remaining.pop(key)}'")
+        else:
+            updated.append(line)
+    updated.extend(f"{key}='{value}'" for key, value in remaining.items())
+    temp = ENV_FILE.with_suffix(".tmp")
+    temp.write_text("\n".join(updated) + "\n", encoding="utf-8")
+    temp.chmod(0o600)
+    os.replace(temp, ENV_FILE)
+    CFG.update(values)
+
+
+def valid_setup_token(token: str) -> bool:
+    expected = config("SETUP_TOKEN")
+    try:
+        expires = int(config("SETUP_EXPIRES", "0"))
+    except ValueError:
+        return False
+    return bool(token and expected) and time.time() < expires and hmac.compare_digest(token, expected)
+
+
+def save_admin_password(token: str, password: str, confirmation: str) -> None:
+    if not valid_setup_token(token):
+        raise ValueError("ลิงก์นี้หมดอายุหรือถูกใช้ไปแล้ว")
+    if password != confirmation:
+        raise ValueError("รหัสผ่านทั้งสองช่องไม่ตรงกัน")
+    if len(password) < 12:
+        raise ValueError("รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร")
+    if not (any(x.islower() for x in password) and any(x.isupper() for x in password)
+            and any(x.isdigit() for x in password) and any(not x.isalnum() for x in password)):
+        raise ValueError("รหัสผ่านต้องมีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และสัญลักษณ์")
+    replace_env_values({"ADMIN_USER": "owladmin", "ADMIN_PASSWORD": password, "SETUP_TOKEN": "", "SETUP_EXPIRES": "0"})
+    CREDENTIAL_NOTE.write_text(
+        "OWL'S NEST Messenger Assistant\n"
+        "URL: https://newton-ritthikornkorjai.incomeinclick.in.th/owl-assistant/\n"
+        "Username: owladmin\n"
+        f"Password: {password}\n",
+        encoding="utf-8",
+    )
+    CREDENTIAL_NOTE.chmod(0o600)
+
+
 def create_draft(message_id: int, psid: str) -> None:
     stamp = now()
     try:
@@ -313,9 +362,9 @@ def rows_for_dashboard() -> list[sqlite3.Row]:
         ).fetchall()
 
 
-def page(body: str, title: str = "ผู้ช่วยตอบแชต OWL'S NEST") -> bytes:
+def page(body: str, title: str = "ผู้ช่วยตอบแชต OWL'S NEST", include_notice: bool = True) -> bytes:
     setup = not bool(config("OPENAI_API_KEY"))
-    notice = '<div class="notice">ยังไม่ได้เชื่อม OpenAI API — ระบบรับข้อความได้ แต่ยังสร้างร่างคำตอบไม่ได้ · <a href="settings">ตั้งค่าตอนนี้</a></div>' if setup else ""
+    notice = '<div class="notice">ยังไม่ได้เชื่อม OpenAI API — ระบบรับข้อความได้ แต่ยังสร้างร่างคำตอบไม่ได้ · <a href="settings">ตั้งค่าตอนนี้</a></div>' if setup and include_notice else ""
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
 <style>
@@ -361,6 +410,20 @@ def settings_page() -> bytes:
 <div class="actions"><button class="send" type="submit">ตรวจสอบและบันทึก</button></div></form>
 <p><a href="./">← กลับหน้าร่างคำตอบ</a></p></section>"""
     return page(body, "ตั้งค่า OpenAI API")
+
+
+def one_time_setup_page(token: str) -> bytes:
+    if not valid_setup_token(token):
+        return page('<div class="notice">ลิงก์นี้หมดอายุหรือถูกใช้ไปแล้ว กรุณาขอลิงก์ใหม่</div>', "ลิงก์หมดอายุ", False)
+    escaped = html.escape(token, quote=True)
+    body = f"""<section class="card"><h2>ตั้งรหัสหลังบ้านครั้งแรก</h2>
+<p class="meta">Username จะเป็น <b>owladmin</b> กรุณาตั้งรหัสที่ไม่ซ้ำกับบัญชีอื่น</p>
+<form method="post" action="setup"><input type="hidden" name="token" value="{escaped}">
+<label for="password">รหัสผ่านใหม่</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required>
+<label for="confirmation">ยืนยันรหัสผ่านอีกครั้ง</label><input id="confirmation" name="confirmation" type="password" autocomplete="new-password" minlength="12" required>
+<p class="meta">อย่างน้อย 12 ตัว มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และสัญลักษณ์</p>
+<div class="actions"><button class="send" type="submit">ตั้งรหัสและปิดลิงก์นี้</button></div></form></section>"""
+    return page(body, "ตั้งรหัสหลังบ้าน", False)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -436,6 +499,11 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.send_bytes(403, b"Forbidden", "text/plain")
             return
+        if url.path == "/setup":
+            token = urllib.parse.parse_qs(url.query).get("token", [""])[0]
+            status = 200 if valid_setup_token(token) else 410
+            self.send_bytes(status, one_time_setup_page(token))
+            return
         if url.path in ("/", ""):
             if self.require_auth():
                 self.send_bytes(200, dashboard())
@@ -465,6 +533,16 @@ class Handler(BaseHTTPRequestHandler):
             for entry in payload.get("entry", []):
                 for event in entry.get("messaging", []):
                     threading.Thread(target=process_event, args=(event,), daemon=True).start()
+            return
+
+        if url.path == "/setup":
+            form = self.read_form()
+            try:
+                save_admin_password(form.get("token", ""), form.get("password", ""), form.get("confirmation", ""))
+            except Exception as exc:
+                self.send_bytes(400, page(f'<div class="notice">{html.escape(str(exc))}</div>', "ตั้งรหัสไม่สำเร็จ", False))
+                return
+            self.send_bytes(200, page('<section class="card"><h2>ตั้งรหัสสำเร็จแล้ว</h2><p>ลิงก์นี้ถูกปิดแล้ว กรุณาเข้า Dashboard ด้วย Username <b>owladmin</b> และรหัสที่เพิ่งตั้ง</p><p><a href="./">เข้าสู่ Dashboard →</a></p></section>', "ตั้งรหัสสำเร็จ", False))
             return
 
         if not self.require_auth():

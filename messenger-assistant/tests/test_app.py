@@ -68,6 +68,22 @@ class AssistantTests(unittest.TestCase):
         signature = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         self.assertTrue(hmac.compare_digest(signature, signature))
 
+    def test_admin_setup_token_is_single_use(self):
+        env_file = Path(self.temp.name) / "runtime.env"
+        note_file = Path(self.temp.name) / "credential.txt"
+        expires = str(int(__import__("time").time()) + 300)
+        env_file.write_text(f"ADMIN_USER='old'\nADMIN_PASSWORD='old-pass'\nSETUP_TOKEN='one-time'\nSETUP_EXPIRES='{expires}'\n", encoding="utf-8")
+        old_env_file, old_note, old_cfg = app.ENV_FILE, app.CREDENTIAL_NOTE, dict(app.CFG)
+        try:
+            app.ENV_FILE, app.CREDENTIAL_NOTE = env_file, note_file
+            app.CFG.update({"SETUP_TOKEN": "one-time", "SETUP_EXPIRES": expires})
+            app.save_admin_password("one-time", "StrongPassword1!", "StrongPassword1!")
+            self.assertFalse(app.valid_setup_token("one-time"))
+            self.assertIn("Username: owladmin", note_file.read_text(encoding="utf-8"))
+            self.assertEqual(oct(note_file.stat().st_mode & 0o777), "0o600")
+        finally:
+            app.ENV_FILE, app.CREDENTIAL_NOTE, app.CFG = old_env_file, old_note, old_cfg
+
     @patch("app.requests.get")
     def test_save_openai_key_keeps_it_out_of_database(self, get):
         response = Mock(ok=True)
