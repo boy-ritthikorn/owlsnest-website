@@ -68,6 +68,23 @@ class AssistantTests(unittest.TestCase):
         signature = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         self.assertTrue(hmac.compare_digest(signature, signature))
 
+    @patch("app.requests.get")
+    def test_save_openai_key_keeps_it_out_of_database(self, get):
+        response = Mock(ok=True)
+        get.return_value = response
+        env_file = Path(self.temp.name) / "runtime.env"
+        env_file.write_text("OPENAI_API_KEY=''\nOPENAI_MODEL='gpt-5.6-luna'\n", encoding="utf-8")
+        old_env_file = app.ENV_FILE
+        try:
+            app.ENV_FILE = env_file
+            app.save_openai_key("sk-test-value-not-a-real-key")
+            self.assertIn("sk-test-value", env_file.read_text(encoding="utf-8"))
+            with app.db() as conn:
+                values = " ".join(str(x) for row in conn.execute("SELECT * FROM messages") for x in row)
+            self.assertNotIn("sk-test-value", values)
+        finally:
+            app.ENV_FILE = old_env_file
+
 
 if __name__ == "__main__":
     unittest.main()

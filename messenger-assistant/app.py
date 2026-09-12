@@ -207,6 +207,42 @@ def generate_reply(psid: str) -> dict:
     return json.loads(extract_output_text(data))
 
 
+def validate_openai_key(api_key: str) -> None:
+    response = requests.get(
+        f"https://api.openai.com/v1/models/{config('OPENAI_MODEL', 'gpt-5.6-luna')}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        timeout=20,
+    )
+    if not response.ok:
+        try:
+            message = response.json().get("error", {}).get("message", "ตรวจสอบ API key ไม่สำเร็จ")
+        except ValueError:
+            message = "ตรวจสอบ API key ไม่สำเร็จ"
+        raise RuntimeError(message)
+
+
+def save_openai_key(api_key: str) -> None:
+    if not api_key.startswith("sk-") or len(api_key) < 20:
+        raise ValueError("รูปแบบ OpenAI API key ไม่ถูกต้อง")
+    validate_openai_key(api_key)
+    lines = ENV_FILE.read_text(encoding="utf-8").splitlines() if ENV_FILE.exists() else []
+    updated = []
+    found = False
+    for line in lines:
+        if line.startswith("OPENAI_API_KEY="):
+            updated.append(f"OPENAI_API_KEY='{api_key}'")
+            found = True
+        else:
+            updated.append(line)
+    if not found:
+        updated.append(f"OPENAI_API_KEY='{api_key}'")
+    temp = ENV_FILE.with_suffix(".tmp")
+    temp.write_text("\n".join(updated) + "\n", encoding="utf-8")
+    temp.chmod(0o600)
+    os.replace(temp, ENV_FILE)
+    CFG["OPENAI_API_KEY"] = api_key
+
+
 def create_draft(message_id: int, psid: str) -> None:
     stamp = now()
     try:
@@ -279,7 +315,7 @@ def rows_for_dashboard() -> list[sqlite3.Row]:
 
 def page(body: str, title: str = "ผู้ช่วยตอบแชต OWL'S NEST") -> bytes:
     setup = not bool(config("OPENAI_API_KEY"))
-    notice = '<div class="notice">ยังไม่ได้เชื่อม OpenAI API — ระบบรับข้อความได้ แต่ยังสร้างร่างคำตอบไม่ได้</div>' if setup else ""
+    notice = '<div class="notice">ยังไม่ได้เชื่อม OpenAI API — ระบบรับข้อความได้ แต่ยังสร้างร่างคำตอบไม่ได้ · <a href="settings">ตั้งค่าตอนนี้</a></div>' if setup else ""
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
 <style>
@@ -290,6 +326,7 @@ def page(body: str, title: str = "ผู้ช่วยตอบแชต OWL'S 
 .card{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:14px 0}}.meta{{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}}
 .customer{{font-size:17px;margin:12px 0;padding:12px;background:#222225;border-radius:8px}}textarea,input{{width:100%;background:#101012;color:var(--text);border:1px solid #50483c;border-radius:7px;padding:11px;font:inherit}}
 textarea{{min-height:88px;resize:vertical}}button{{border:0;border-radius:7px;padding:10px 15px;font-weight:700;cursor:pointer}}.send{{background:var(--gold);color:#111}}.regen{{background:#302c27;color:var(--text)}}
+.notice a,a{{color:#f1cf86}}label{{display:block;margin:15px 0 7px;color:var(--muted)}}
 .actions{{display:flex;gap:8px;margin-top:10px}}.high{{color:#79c789}}.medium{{color:#e7c16e}}.low{{color:#ef8585}}.empty{{text-align:center;color:var(--muted);padding:50px 10px}}
 @media(max-width:520px){{.actions{{flex-direction:column}}button{{width:100%}}}}
 </style></head><body><main class="wrap"><h1>OWL'S NEST · ผู้ช่วยตอบแชต</h1><p class="sub">โหมดร่างคำตอบ — ระบบจะไม่ส่งหาลูกค้าเอง</p>{notice}{body}</main></body></html>""".encode("utf-8")
@@ -312,6 +349,18 @@ def dashboard() -> bytes:
     if not cards:
         cards.append('<div class="empty"><p>ยังไม่มีข้อความใหม่</p><form method="post" action="simulate"><input type="hidden" name="csrf" value="'+csrf+'"><input name="message" placeholder="พิมพ์ข้อความลูกค้าเพื่อทดสอบ"><div class="actions"><button class="regen" type="submit">ทดลองสร้างร่าง</button></div></form></div>')
     return page("".join(cards))
+
+
+def settings_page() -> bytes:
+    csrf = html.escape(config("CSRF_TOKEN"), quote=True)
+    state = "เชื่อมต่อแล้ว" if config("OPENAI_API_KEY") else "ยังไม่ได้เชื่อมต่อ"
+    body = f"""<section class="card"><p>สถานะ OpenAI API: <b>{state}</b></p>
+<p class="meta">API key จะส่งผ่าน HTTPS และบันทึกในไฟล์ลับบนเซิร์ฟเวอร์ ไม่เก็บใน GitHub</p>
+<form method="post" action="settings"><input type="hidden" name="csrf" value="{csrf}">
+<label for="api_key">OpenAI API key</label><input id="api_key" name="api_key" type="password" autocomplete="off" placeholder="sk-..." required>
+<div class="actions"><button class="send" type="submit">ตรวจสอบและบันทึก</button></div></form>
+<p><a href="./">← กลับหน้าร่างคำตอบ</a></p></section>"""
+    return page(body, "ตั้งค่า OpenAI API")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -391,6 +440,10 @@ class Handler(BaseHTTPRequestHandler):
             if self.require_auth():
                 self.send_bytes(200, dashboard())
             return
+        if url.path == "/settings":
+            if self.require_auth():
+                self.send_bytes(200, settings_page())
+            return
         self.send_bytes(404, b"Not found", "text/plain")
 
     def do_POST(self) -> None:
@@ -444,6 +497,8 @@ class Handler(BaseHTTPRequestHandler):
                     with db() as conn:
                         conn.execute("UPDATE drafts SET reply=?, status='sent', error='', updated_at=? WHERE id=?", (reply, stamp, draft_id))
                         conn.execute("INSERT INTO messages(mid, psid, direction, text, created_at) VALUES(?,?,?,?,?)", (mid or f"sent-{time.time_ns()}", row["psid"], "out", reply, stamp))
+            elif url.path == "/settings":
+                save_openai_key(form.get("api_key", "").strip())
             else:
                 self.send_bytes(404, b"Not found", "text/plain")
                 return

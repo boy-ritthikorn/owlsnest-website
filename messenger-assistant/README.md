@@ -28,4 +28,4 @@ Source อยู่ที่ `/root/owlsnest-website/messenger-assistant/` แ�
 - Port: `127.0.0.1:5606`
 - Default model: `gpt-5.6-luna`
 
-ระบบจะรับข้อความจริงแล้ว แต่จะไม่สร้างร่างจนกว่าจะใส่ `OPENAI_API_KEY` และ restart service
+ระบบจะรับข้อความจริงแล้ว แต่จะไม่สร้างร่างจนกว่าจะใส่ `OPENAI_API_KEY` ที่หน้า `/owl-assistant/settings`
