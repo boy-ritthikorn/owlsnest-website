@@ -57,6 +57,7 @@ diff /tmp/before.html /tmp/after.html
 | `gbp-checklist.html` | หน้า checklist ตั้งค่า Google Business Profile |
 | `admin/app.py` | เซิร์ฟเวอร์หลังบ้าน (Python stdlib ล้วน ไม่มี dependency) |
 | `admin/admin.html` | หน้าจอหลังบ้าน ภาษาไทย ใช้บนมือถือได้ |
+| `messenger-assistant/` | ระบบรับข้อความ Facebook และสร้างร่างคำตอบให้พนักงานตรวจ |
 
 ---
 
