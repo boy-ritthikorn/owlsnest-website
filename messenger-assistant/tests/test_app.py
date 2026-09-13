@@ -18,6 +18,7 @@ class AssistantTests(unittest.TestCase):
         app.DB_FILE = Path(self.temp.name) / "test.db"
         app.CFG = {
             "META_PAGE_TOKEN": "page-token",
+            "META_APP_ID": "our-app",
             "OPENAI_API_KEY": "openai-key",
             "OPENAI_MODEL": "gpt-5.6-luna",
         }
@@ -31,6 +32,55 @@ class AssistantTests(unittest.TestCase):
         second = app.record_incoming("person-1", "mid-1", "เปิดกี่โมง", "simulator")
         self.assertIsInstance(first, int)
         self.assertIsNone(second)
+
+    def test_team_echo_is_context_and_closes_pending_draft(self):
+        incoming_id = app.record_incoming("person-1", "mid-in", "จองโต๊ะได้ไหม", "simulator")
+        with app.db() as conn:
+            conn.execute(
+                """INSERT INTO drafts(message_id, reply, confidence, needs_human, reason, status, error, created_at, updated_at)
+                   VALUES(?, 'ร่างเดิม', 'medium', 1, '', 'pending', '', 1, 1)""",
+                (incoming_id,),
+            )
+        event = {
+            "sender": {"id": "page-1"},
+            "recipient": {"id": "person-1"},
+            "message": {"mid": "mid-team", "is_echo": True, "text": "ได้ครับ รบกวนแจ้งวันและจำนวนคนครับ"},
+        }
+        app.process_event(event)
+        with app.db() as conn:
+            draft = conn.execute("SELECT status FROM drafts WHERE message_id=?", (incoming_id,)).fetchone()
+            outgoing = conn.execute("SELECT direction, source FROM messages WHERE mid='mid-team'").fetchone()
+            example = conn.execute("SELECT status FROM reply_examples").fetchone()
+        self.assertEqual(draft["status"], "answered_elsewhere")
+        self.assertEqual((outgoing["direction"], outgoing["source"]), ("out", "facebook_team"))
+        self.assertEqual(example["status"], "pending")
+        self.assertEqual(app.recent_history("person-1")[-1]["role"], "staff")
+
+    def test_echo_from_this_app_is_not_learned(self):
+        event = {
+            "sender": {"id": "page-1"},
+            "recipient": {"id": "person-1"},
+            "message": {"mid": "mid-app", "is_echo": True, "app_id": "our-app", "text": "ตอบจากระบบ"},
+        }
+        app.process_event(event)
+        with app.db() as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM reply_examples").fetchone()[0], 0)
+
+    @patch("app.generate_reply")
+    def test_team_reply_before_slow_draft_keeps_draft_closed(self, generate):
+        generate.return_value = {
+            "reply": "ร่างที่มาช้า", "confidence": "high", "needs_human": False, "reason": "",
+        }
+        incoming_id = app.record_incoming("person-1", "mid-in", "สอบถามครับ", "simulator")
+        app.record_team_echo({
+            "recipient": {"id": "person-1"},
+            "message": {"mid": "mid-team", "is_echo": True, "text": "ทีมตอบแล้วครับ"},
+        })
+        app.create_draft(incoming_id, "person-1")
+        with app.db() as conn:
+            draft = conn.execute("SELECT status FROM drafts WHERE message_id=?", (incoming_id,)).fetchone()
+        self.assertEqual(draft["status"], "answered_elsewhere")
 
     @patch("app.requests.post")
     def test_openai_structured_draft(self, post):
@@ -52,6 +102,28 @@ class AssistantTests(unittest.TestCase):
         self.assertFalse(sent["store"])
         self.assertEqual(sent["text"]["format"]["type"], "json_schema")
         self.assertNotIn("person-1", sent["safety_identifier"])
+
+    @patch("app.requests.post")
+    def test_approved_team_reply_is_added_as_style_example(self, post):
+        response = Mock(ok=True)
+        response.json.return_value = {
+            "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({
+                "reply": "ได้ครับ", "confidence": "medium", "needs_human": True, "reason": "รอตรวจ"
+            }, ensure_ascii=False)}]}]
+        }
+        post.return_value = response
+        app.record_incoming("old-customer", "old-in", "มีโต๊ะไหม", "simulator")
+        message_id = app.record_team_echo({
+            "recipient": {"id": "old-customer"},
+            "message": {"mid": "old-out", "is_echo": True, "text": "ขอตรวจสอบโต๊ะให้สักครู่นะครับ"},
+        })
+        with app.db() as conn:
+            conn.execute("UPDATE reply_examples SET status='approved' WHERE message_id=?", (message_id,))
+        app.record_incoming("new-customer", "new-in", "ว่างไหม", "simulator")
+        app.generate_reply("new-customer")
+        payload = json.loads(post.call_args.kwargs["json"]["input"])
+        self.assertEqual(payload["approved_staff_examples"][0]["customer"], "มีโต๊ะไหม")
+        self.assertEqual(payload["approved_staff_examples"][0]["staff"], "ขอตรวจสอบโต๊ะให้สักครู่นะครับ")
 
     @patch("app.requests.post")
     def test_send_message_uses_response_type(self, post):

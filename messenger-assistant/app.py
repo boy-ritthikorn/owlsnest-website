@@ -86,6 +86,17 @@ def init_db() -> None:
                 updated_at INTEGER NOT NULL,
                 FOREIGN KEY(message_id) REFERENCES messages(id)
             );
+            CREATE TABLE IF NOT EXISTS reply_examples (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER NOT NULL UNIQUE,
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending', 'approved', 'rejected')),
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY(message_id) REFERENCES messages(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_reply_examples_status_time
+                ON reply_examples(status, updated_at DESC);
             """
         )
 
@@ -144,6 +155,25 @@ def recent_history(psid: str, limit: int = 12) -> list[dict[str, str]]:
     ]
 
 
+def approved_reply_examples(limit: int = 12) -> list[dict[str, str]]:
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT outgoing.text AS staff_text,
+                      COALESCE((SELECT incoming.text FROM messages incoming
+                                WHERE incoming.psid=outgoing.psid
+                                  AND incoming.direction='in'
+                                  AND (incoming.created_at < outgoing.created_at
+                                       OR (incoming.created_at = outgoing.created_at AND incoming.id < outgoing.id))
+                                ORDER BY incoming.created_at DESC, incoming.id DESC LIMIT 1), '') AS customer_text
+               FROM reply_examples example
+               JOIN messages outgoing ON outgoing.id=example.message_id
+               WHERE example.status='approved'
+               ORDER BY example.updated_at DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+    return [{"customer": row["customer_text"], "staff": row["staff_text"]} for row in rows]
+
+
 def extract_output_text(data: dict) -> str:
     for item in data.get("output", []):
         if item.get("type") != "message":
@@ -163,13 +193,18 @@ def generate_reply(psid: str) -> dict:
         "คุณคือผู้ช่วยแอดมิน OWL'S NEST Bar & Bistro ตอบภาษาเดียวกับลูกค้าแบบอบอุ่น กระชับ "
         "เป็นธรรมชาติ ไม่ขายยัดเยียด ไม่อ้างว่าเป็นมนุษย์ ใช้เฉพาะข้อมูลที่ให้มา ห้ามเดาเวลา ราคา "
         "โต๊ะว่าง หรือการยืนยันจอง หากไม่แน่ใจให้ needs_human=true ถ้าลูกค้าจะจองให้เก็บวัน เวลา "
-        "จำนวนคน ชื่อ และเบอร์โทรทีละเรื่อง และบอกว่าพนักงานจะยืนยันอีกครั้ง"
+        "จำนวนคน ชื่อ และเบอร์โทรทีละเรื่อง และบอกว่าพนักงานจะยืนยันอีกครั้ง "
+        "approved_staff_examples ใช้เลียนแบบสำนวนเท่านั้น ห้ามใช้เป็นแหล่งข้อมูลราคา โปรโมชั่น เวลา หรือโต๊ะว่าง"
     )
     body = {
         "model": config("OPENAI_MODEL", "gpt-5.6-luna"),
         "instructions": instructions,
         "input": json.dumps(
-            {"restaurant_facts": load_knowledge(), "conversation": recent_history(psid)},
+            {
+                "restaurant_facts": load_knowledge(),
+                "approved_staff_examples": approved_reply_examples(),
+                "conversation": recent_history(psid),
+            },
             ensure_ascii=False,
         ),
         "reasoning": {"effort": "none"},
@@ -306,6 +341,16 @@ def create_draft(message_id: int, psid: str) -> None:
         reply, confidence, needs_human, reason = "", "low", 1, "ต้องให้พนักงานตรวจ"
         status, error = "waiting_setup", str(exc)
     with db() as conn:
+        answered_by_team = conn.execute(
+            """SELECT 1 FROM messages incoming
+               JOIN messages outgoing ON outgoing.psid=incoming.psid
+                 AND outgoing.direction='out' AND outgoing.source='facebook_team'
+                 AND outgoing.id > incoming.id
+               WHERE incoming.id=? LIMIT 1""",
+            (message_id,),
+        ).fetchone()
+        if answered_by_team:
+            status, reason, error = "answered_elsewhere", "ทีมตอบจาก Facebook แล้ว", ""
         conn.execute(
             """INSERT INTO drafts(message_id, reply, confidence, needs_human, reason, status, error, created_at, updated_at)
                VALUES(?,?,?,?,?,?,?,?,?)
@@ -328,9 +373,48 @@ def record_incoming(psid: str, mid: str, text: str, source: str = "facebook") ->
             return None
 
 
+def record_team_echo(event: dict) -> int | None:
+    message = event.get("message", {})
+    our_app_id = config("META_APP_ID")
+    if our_app_id and str(message.get("app_id", "")) == our_app_id:
+        return None
+    psid = str(event.get("recipient", {}).get("id", ""))
+    mid = str(message.get("mid", ""))
+    raw_text = str(message.get("text", "")).strip()
+    if not psid or not mid:
+        return None
+    text = raw_text or "[พนักงานส่งรูปภาพ สติกเกอร์ หรือไฟล์จาก Facebook]"
+    stamp = now()
+    with db() as conn:
+        try:
+            cur = conn.execute(
+                "INSERT INTO messages(mid, psid, sender_name, direction, text, created_at, source) VALUES(?,?,?,?,?,?,?)",
+                (mid, psid, "ทีม OWL'S NEST", "out", text, stamp, "facebook_team"),
+            )
+        except sqlite3.IntegrityError:
+            return None
+        message_id = int(cur.lastrowid)
+        conn.execute(
+            """UPDATE drafts SET status='answered_elsewhere', reason='ทีมตอบจาก Facebook แล้ว',
+                       error='', updated_at=?
+               WHERE status IN ('pending', 'waiting_setup')
+                 AND message_id IN (
+                     SELECT id FROM messages WHERE psid=? AND direction='in' AND id < ?
+                 )""",
+            (stamp, psid, message_id),
+        )
+        if raw_text:
+            conn.execute(
+                "INSERT INTO reply_examples(message_id, status, created_at, updated_at) VALUES(?, 'pending', ?, ?)",
+                (message_id, stamp, stamp),
+            )
+    return message_id
+
+
 def process_event(event: dict) -> None:
     message = event.get("message", {})
     if message.get("is_echo"):
+        record_team_echo(event)
         return
     psid = str(event.get("sender", {}).get("id", ""))
     mid = str(message.get("mid", ""))
@@ -359,6 +443,23 @@ def rows_for_dashboard() -> list[sqlite3.Row]:
             """SELECT d.*, m.psid, m.sender_name, m.text AS customer_text, m.created_at AS message_time
                FROM drafts d JOIN messages m ON m.id=d.message_id
                ORDER BY d.updated_at DESC LIMIT 100"""
+        ).fetchall()
+
+
+def reply_examples_for_dashboard() -> list[sqlite3.Row]:
+    with db() as conn:
+        return conn.execute(
+            """SELECT example.id, example.status, outgoing.text AS staff_text,
+                      COALESCE((SELECT incoming.text FROM messages incoming
+                                WHERE incoming.psid=outgoing.psid
+                                  AND incoming.direction='in'
+                                  AND (incoming.created_at < outgoing.created_at
+                                       OR (incoming.created_at = outgoing.created_at AND incoming.id < outgoing.id))
+                                ORDER BY incoming.created_at DESC, incoming.id DESC LIMIT 1), '') AS customer_text
+               FROM reply_examples example
+               JOIN messages outgoing ON outgoing.id=example.message_id
+               WHERE example.status='pending'
+               ORDER BY example.updated_at DESC LIMIT 50"""
         ).fetchall()
 
 
@@ -391,13 +492,30 @@ def dashboard() -> bytes:
         reason = html.escape(row["reason"] or row["error"])
         status = html.escape(row["status"])
         confidence = html.escape(row["confidence"])
+        if row["status"] == "pending":
+            actions = '<div class="actions"><button class="send" type="submit">ตรวจแล้ว ส่งให้ลูกค้า</button><button class="regen" type="submit" formaction="regenerate">สร้างร่างใหม่</button></div>'
+        elif row["status"] == "waiting_setup":
+            actions = '<div class="actions"><button class="regen" type="submit" formaction="regenerate">สร้างร่างใหม่</button></div>'
+        else:
+            actions = '<p class="meta">รายการนี้ถูกจัดการแล้ว จึงปิดปุ่มส่งเพื่อป้องกันข้อความซ้ำ</p>'
         cards.append(f"""<section class="card"><div class="meta"><b>{name}</b><span>สถานะ: {status}</span><span class="{confidence}">ความมั่นใจ: {confidence}</span></div>
 <div class="customer">{customer_text}</div><form method="post" action="send"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="draft_id" value="{row['id']}">
 <textarea name="reply" placeholder="ร่างคำตอบ">{reply}</textarea>{f'<p class="meta">เหตุผลที่ควรให้คนตรวจ: {reason}</p>' if reason else ''}
-<div class="actions"><button class="send" type="submit">ตรวจแล้ว ส่งให้ลูกค้า</button><button class="regen" type="submit" formaction="regenerate">สร้างร่างใหม่</button></div></form></section>""")
+{actions}</form></section>""")
     if not cards:
         cards.append('<div class="empty"><p>ยังไม่มีข้อความใหม่</p><form method="post" action="simulate"><input type="hidden" name="csrf" value="'+csrf+'"><input name="message" placeholder="พิมพ์ข้อความลูกค้าเพื่อทดสอบ"><div class="actions"><button class="regen" type="submit">ทดลองสร้างร่าง</button></div></form></div>')
-    return page("".join(cards))
+    examples = []
+    for row in reply_examples_for_dashboard():
+        customer_text = html.escape(row["customer_text"] or "ไม่พบข้อความก่อนหน้า")
+        staff_text = html.escape(row["staff_text"])
+        examples.append(f"""<section class="card"><div class="meta"><b>ตัวอย่างคำตอบจากทีม · รอตรวจ</b></div>
+<div class="customer">ลูกค้า: {customer_text}</div><p>ทีมตอบ: {staff_text}</p>
+<form method="post" action="example-approve"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="example_id" value="{row['id']}">
+<div class="actions"><button class="send" type="submit">ใช้เป็นตัวอย่างให้ AI</button><button class="regen" type="submit" formaction="example-reject">ไม่ใช้คำตอบนี้</button></div></form></section>""")
+    example_section = ""
+    if examples:
+        example_section = '<h2>เรียนรู้จากคำตอบของทีม</h2><p class="sub">ระบบจะใช้เฉพาะคำตอบที่บอยอนุมัติเป็นตัวอย่างด้านสำนวน ไม่ใช้แทนข้อมูลราคา โปรโมชั่น หรือการยืนยันโต๊ะ</p>' + "".join(examples)
+    return page("".join(cards) + example_section)
 
 
 def settings_page() -> bytes:
@@ -568,13 +686,20 @@ class Handler(BaseHTTPRequestHandler):
                 draft_id = int(form["draft_id"])
                 reply = form.get("reply", "").strip()
                 with db() as conn:
-                    row = conn.execute("SELECT message_id, psid FROM drafts JOIN messages ON messages.id=drafts.message_id WHERE drafts.id=?", (draft_id,)).fetchone()
+                    row = conn.execute("SELECT message_id, psid, status FROM drafts JOIN messages ON messages.id=drafts.message_id WHERE drafts.id=?", (draft_id,)).fetchone()
                 if row and reply:
+                    if row["status"] != "pending":
+                        raise ValueError("ร่างนี้ถูกจัดการแล้ว ระบบจึงไม่ส่งซ้ำ")
                     mid = send_message(row["psid"], reply)
                     stamp = now()
                     with db() as conn:
                         conn.execute("UPDATE drafts SET reply=?, status='sent', error='', updated_at=? WHERE id=?", (reply, stamp, draft_id))
-                        conn.execute("INSERT INTO messages(mid, psid, direction, text, created_at) VALUES(?,?,?,?,?)", (mid or f"sent-{time.time_ns()}", row["psid"], "out", reply, stamp))
+                        conn.execute("INSERT OR IGNORE INTO messages(mid, psid, direction, text, created_at, source) VALUES(?,?,?,?,?,?)", (mid or f"sent-{time.time_ns()}", row["psid"], "out", reply, stamp, "assistant_dashboard"))
+            elif url.path in ("/example-approve", "/example-reject"):
+                example_id = int(form["example_id"])
+                status = "approved" if url.path == "/example-approve" else "rejected"
+                with db() as conn:
+                    conn.execute("UPDATE reply_examples SET status=?, updated_at=? WHERE id=? AND status='pending'", (status, now(), example_id))
             elif url.path == "/settings":
                 save_openai_key(form.get("api_key", "").strip())
             else:
