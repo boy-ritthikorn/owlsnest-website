@@ -377,10 +377,11 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
         <li><a href="#signature">อาหารเด่น</a></li>
         <li><a href="#wine">ไวน์</a></li>
         <li><a href="#menu">เมนู</a></li>
+        <li><a href="/booking/">จองโต๊ะ</a></li>
         <li><a href="#contact">ติดต่อ</a></li>
       </ul>
     </nav>
-    <a href="tel:+66909646284" class="call-btn">090-964-6284</a>
+    <a href="/booking/" class="call-btn">จองโต๊ะออนไลน์</a>
   </div>
 </header>
 
@@ -403,7 +404,7 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
       <span class="chip">ไวน์แก้วละ 350฿</span>
     </div>
     <div class="cta-row">
-      <a href="tel:+66909646284" class="btn btn-solid">โทรจองโต๊ะ</a>
+      <a href="/booking/" class="btn btn-solid">จองโต๊ะออนไลน์</a>
       <a href="#live" class="btn btn-ghost">ดูตารางดนตรีสด</a>
     </div>
   </div>
@@ -473,7 +474,7 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
       </div>
     </div>
 
-    <p class="live-note">แนะนำให้โทรจองโต๊ะล่วงหน้าในคืนที่มีดนตรีสด · <a href="tel:+66909646284">090-964-6284</a></p>
+    <p class="live-note">แนะนำให้จองโต๊ะล่วงหน้าในคืนที่มีดนตรีสด · <a href="/booking/">ส่งคำขอจองออนไลน์</a> · <a href="tel:+66909646284">090-964-6284</a></p>
   </div>
 </section>
 
@@ -810,7 +811,8 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
           </div>
         </div>
         <div class="cta-row" style="justify-content:flex-start;margin-top:26px">
-          <a href="tel:+66909646284" class="btn btn-solid">โทรจองโต๊ะ</a>
+          <a href="/booking/" class="btn btn-solid">จองโต๊ะออนไลน์</a>
+          <a href="tel:+66909646284" class="btn btn-ghost">โทรหาร้าน</a>
           <a href="https://search.google.com/local/writereview?placeid=ChIJ0T9Ji1-F4jAR9u-6tG5nQR4" class="btn btn-ghost" target="_blank" rel="noopener">รีวิวร้านเรา</a>
         </div>
       </div>
@@ -834,6 +836,7 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
       <a href="#signature">อาหารเด่น</a>
       <a href="#wine">ไวน์</a>
       <a href="#menu">เมนู</a>
+      <a href="/booking/">จองโต๊ะ</a>
       <a href="#contact">ติดต่อ</a>
     </div>
     <p>58/2 ถนนหอการค้า ต.คลองข่อย อ.ปากเกร็ด จ.นนทบุรี 11120 · โทร 090-964-6284</p>
@@ -844,8 +847,8 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
 </footer>
 
 <div class="mobile-bar">
-  <a href="tel:+66909646284" class="p">โทรจองโต๊ะ</a>
-  <a href="https://maps.app.goo.gl/AZgYJcKQ5bgXPcPb7" class="s" target="_blank" rel="noopener">นำทาง</a>
+  <a href="/booking/" class="p">จองโต๊ะออนไลน์</a>
+  <a href="tel:+66909646284" class="s">โทรหาร้าน</a>
 </div>
 
 <!-- Meta Pixel: เก็บพฤติกรรมสำคัญของลูกค้า -->
@@ -859,6 +862,8 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
     var href = a.getAttribute('href') || '';
     if (href.indexOf('tel:') === 0) {
       fbq('track', 'Contact', { content_name: 'โทรจองโต๊ะ' });
+    } else if (href.indexOf('/booking/') === 0) {
+      fbq('track', 'InitiateCheckout', { content_name: 'เปิดหน้าจองโต๊ะ' });
     } else if (href.indexOf('maps.app.goo.gl') > -1) {
       fbq('track', 'FindLocation', { content_name: 'นำทาง Google Maps' });
     } else if (href.indexOf('writereview') > -1) {

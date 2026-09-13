@@ -3,6 +3,8 @@
 เว็บไซต์ร้าน OWL'S NEST Bar & Bistro (ปากเกร็ด นนทบุรี) — บาร์ไวน์ อาหารสเปน และดนตรีสด
 
 **เว็บจริง:** https://owlsnestbar.com
+**หน้าจองโต๊ะ:** https://owlsnestbar.com/booking/
+**จัดการรายการจอง:** https://owlsnestbar.com/booking/admin
 **หลังบ้านแก้เมนู/ตารางดนตรี:** https://newton-ritthikornkorjai.incomeinclick.in.th/owl-admin/
 
 ---
@@ -58,6 +60,7 @@ diff /tmp/before.html /tmp/after.html
 | `admin/app.py` | เซิร์ฟเวอร์หลังบ้าน (Python stdlib ล้วน ไม่มี dependency) |
 | `admin/admin.html` | หน้าจอหลังบ้าน ภาษาไทย ใช้บนมือถือได้ |
 | `messenger-assistant/` | ระบบรับข้อความ Facebook และสร้างร่างคำตอบให้พนักงานตรวจ |
+| `booking/` | หน้ารับคำขอจองและหลังบ้านสำหรับจัดโต๊ะ/โทรยืนยัน |
 
 ---
 
@@ -67,6 +70,7 @@ diff /tmp/before.html /tmp/after.html
 |---|---|
 | โฟลเดอร์เว็บจริง | `/var/www/owlsnest/` |
 | หลังบ้าน (systemd) | `owl-admin.service` — พอร์ต `127.0.0.1:5605` |
+| ระบบจอง (systemd) | `owl-booking.service` — พอร์ต `127.0.0.1:5607` |
 | nginx โดเมนใหม่ | `/etc/nginx/sites-available/owlsnestbar` |
 | nginx ลิงก์เก่า `/owl/` | 301 ไป `https://owlsnestbar.com` |
 | SSL | Let's Encrypt (certbot ต่ออายุอัตโนมัติ) |
