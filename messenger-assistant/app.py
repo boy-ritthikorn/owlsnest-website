@@ -512,9 +512,11 @@ def dashboard() -> bytes:
 <div class="customer">ลูกค้า: {customer_text}</div><p>ทีมตอบ: {staff_text}</p>
 <form method="post" action="example-approve"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="example_id" value="{row['id']}">
 <div class="actions"><button class="send" type="submit">ใช้เป็นตัวอย่างให้ AI</button><button class="regen" type="submit" formaction="example-reject">ไม่ใช้คำตอบนี้</button></div></form></section>""")
-    example_section = ""
     if examples:
-        example_section = '<h2>เรียนรู้จากคำตอบของทีม</h2><p class="sub">ระบบจะใช้เฉพาะคำตอบที่บอยอนุมัติเป็นตัวอย่างด้านสำนวน ไม่ใช้แทนข้อมูลราคา โปรโมชั่น หรือการยืนยันโต๊ะ</p>' + "".join(examples)
+        example_body = "".join(examples)
+    else:
+        example_body = '<section class="card empty"><p><b>ยังไม่มีคำตอบจากทีมที่รอตรวจ</b></p><p>เมื่อน้องในทีมตอบลูกค้าจาก Facebook โดยตรง รายการจะปรากฏตรงนี้</p></section>'
+    example_section = '<h2>เรียนรู้จากคำตอบของทีม</h2><p class="sub">ระบบจะใช้เฉพาะคำตอบที่บอยอนุมัติเป็นตัวอย่างด้านสำนวน ไม่ใช้แทนข้อมูลราคา โปรโมชั่น หรือการยืนยันโต๊ะ</p>' + example_body
     return page("".join(cards) + example_section)
 
 

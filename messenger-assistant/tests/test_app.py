@@ -33,6 +33,11 @@ class AssistantTests(unittest.TestCase):
         self.assertIsInstance(first, int)
         self.assertIsNone(second)
 
+    def test_learning_section_is_visible_when_empty(self):
+        body = app.dashboard().decode("utf-8")
+        self.assertIn("เรียนรู้จากคำตอบของทีม", body)
+        self.assertIn("ยังไม่มีคำตอบจากทีมที่รอตรวจ", body)
+
     def test_team_echo_is_context_and_closes_pending_draft(self):
         incoming_id = app.record_incoming("person-1", "mid-in", "จองโต๊ะได้ไหม", "simulator")
         with app.db() as conn:
