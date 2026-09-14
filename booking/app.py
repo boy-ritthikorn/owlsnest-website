@@ -2,6 +2,7 @@
 """OWL'S NEST table reservation requests and staff confirmation dashboard."""
 import hashlib
 import hmac
+import base64
 import json
 import os
 import re
@@ -13,13 +14,17 @@ from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 HERE = Path(__file__).resolve().parent
 PUBLIC_UI = HERE / "public.html"
 ADMIN_UI = HERE / "admin.html"
+LINE_SETTINGS_UI = HERE / "line-settings.html"
 ADMIN_CONFIG = HERE.parent / "admin" / "config.json"
+LINE_CONFIG = Path(os.environ.get("OWL_LINE_CONFIG", "/root/.secrets/owlsnest-line-alert.json"))
 DB_PATH = Path(os.environ.get("OWL_BOOKING_DB", "/root/owlsnest-data/bookings.sqlite3"))
 HOST = os.environ.get("OWL_BOOKING_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OWL_BOOKING_PORT", "5607"))
@@ -54,14 +59,71 @@ def init_db():
                 note TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'pending',
                 assigned_tables TEXT NOT NULL DEFAULT '',
-                staff_note TEXT NOT NULL DEFAULT ''
+                staff_note TEXT NOT NULL DEFAULT '',
+                line_notify_status TEXT NOT NULL DEFAULT ''
             )
         """)
+        columns = {row[1] for row in con.execute("PRAGMA table_info(bookings)")}
+        if "line_notify_status" not in columns:
+            con.execute("ALTER TABLE bookings ADD COLUMN line_notify_status TEXT NOT NULL DEFAULT ''")
         con.execute("CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(booking_date, booking_time)")
     DB_PATH.chmod(0o600)
 
 def admin_config():
     return json.loads(ADMIN_CONFIG.read_text(encoding="utf-8"))
+
+def line_config():
+    if not LINE_CONFIG.exists():
+        return {}
+    return json.loads(LINE_CONFIG.read_text(encoding="utf-8"))
+
+def save_line_config(cfg):
+    LINE_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    LINE_CONFIG.parent.chmod(0o700)
+    temp = LINE_CONFIG.with_suffix(".tmp")
+    temp.write_text(json.dumps(cfg, ensure_ascii=False), encoding="utf-8")
+    temp.chmod(0o600)
+    temp.replace(LINE_CONFIG)
+
+def verify_line_token(token):
+    req = Request("https://api.line.me/v2/bot/info",
+                  headers={"Authorization": "Bearer " + token, "User-Agent": "OwlBooking/1.0"})
+    try:
+        with urlopen(req, timeout=10) as response:
+            return json.load(response)
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise ValueError("LINE ไม่ยอมรับ Token นี้ กรุณาตรวจแล้วลองใหม่") from exc
+
+def send_line_alert(booking):
+    cfg = line_config()
+    token, target = cfg.get("channel_access_token"), cfg.get("target_id")
+    if not token or not target:
+        return "not_configured"
+    area = booking["preference"] or "ให้ร้านจัดพื้นที่ให้"
+    note = booking["note"] or "-"
+    text = (
+        "🔔 มีคำขอจองโต๊ะใหม่\n"
+        f"เลขที่: {booking['code']}\n"
+        f"วันที่: {booking['booking_date']}\n"
+        f"เวลา: {booking['booking_time']} น.\n"
+        f"จำนวน: {booking['party_size']} ท่าน\n"
+        f"พื้นที่: {area}\n"
+        f"ชื่อ: {booking['customer_name']}\n"
+        f"โทร: {booking['phone']}\n"
+        f"ช่องทางติดต่อ: {booking['contact_channel']}\n"
+        f"หมายเหตุ: {note}\n"
+        "จัดการ: https://owlsnestbar.com/booking/admin"
+    )
+    payload = json.dumps({"to": target, "messages": [{"type": "text", "text": text}],
+                          "notificationDisabled": False}, ensure_ascii=False).encode()
+    req = Request("https://api.line.me/v2/bot/message/push", data=payload, method="POST",
+                  headers={"Authorization": "Bearer " + token,
+                           "Content-Type": "application/json", "User-Agent": "OwlBooking/1.0"})
+    try:
+        with urlopen(req, timeout=10) as response:
+            return "sent" if response.status == 200 else "failed"
+    except (HTTPError, URLError, TimeoutError):
+        return "failed"
 
 def hash_password(password, salt):
     return hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 200_000).hex()
@@ -169,6 +231,8 @@ class Handler(BaseHTTPRequestHandler):
             size = len(PUBLIC_UI.read_bytes())
         elif path == "/admin":
             size = len(ADMIN_UI.read_bytes())
+        elif path == "/line-settings":
+            size = len(LINE_SETTINGS_UI.read_bytes())
         else:
             self.send_response(HTTPStatus.NOT_FOUND)
             self.end_headers()
@@ -189,8 +253,25 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(HTTPStatus.OK, PUBLIC_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
         if path == "/admin":
             return self.send(HTTPStatus.OK, ADMIN_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
+        if path == "/line-settings":
+            return self.send(HTTPStatus.OK, LINE_SETTINGS_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
         if path == "/api/me":
             return self.send(HTTPStatus.OK, {"authed": self.authed()})
+        if path == "/api/admin/line-settings":
+            if not self.authed():
+                return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ยังไม่ได้เข้าสู่ระบบ"})
+            cfg = line_config()
+            target = cfg.get("target_id", "")
+            return self.send(HTTPStatus.OK, {
+                "token_configured": bool(cfg.get("channel_access_token")),
+                "secret_configured": bool(cfg.get("channel_secret")),
+                "bot_name": cfg.get("bot_name", ""),
+                "target_configured": bool(target),
+                "target_type": cfg.get("target_type", ""),
+                "candidate_detected": bool(cfg.get("candidate_id")),
+                "candidate_type": cfg.get("candidate_type", ""),
+                "webhook_url": "https://owlsnestbar.com/booking/line-webhook",
+            })
         if path == "/api/admin/bookings":
             if not self.authed():
                 return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ยังไม่ได้เข้าสู่ระบบ"})
@@ -210,6 +291,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path.rstrip("/") or "/"
+        if path == "/line-webhook":
+            return self.handle_line_webhook()
         try:
             body = self.body_json()
         except Exception:
@@ -226,12 +309,18 @@ class Handler(BaseHTTPRequestHandler):
             now = datetime.now(TZ).isoformat(timespec="seconds")
             code = booking_code(values[0])
             with db() as con:
-                con.execute("""
+                cur = con.execute("""
                     INSERT INTO bookings
                     (code, created_at, updated_at, booking_date, booking_time, party_size,
                      preference, customer_name, phone, contact_channel, note)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (code, now, now, *values))
+                booking_id = cur.lastrowid
+                booking = dict(con.execute("SELECT * FROM bookings WHERE id=?", (booking_id,)).fetchone())
+            notify_status = send_line_alert(booking)
+            with db() as con:
+                con.execute("UPDATE bookings SET line_notify_status=? WHERE id=?",
+                            (notify_status, booking_id))
             return self.send(HTTPStatus.CREATED, {
                 "ok": True, "code": code,
                 "message": "ร้านได้รับคำขอจองแล้ว กรุณารอการโทรยืนยันจากทางร้าน"
@@ -250,6 +339,34 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/logout":
             cookie = f"owl_booking_admin=; Path={BASE_PATH}/; HttpOnly; SameSite=Lax; Secure; Max-Age=0"
             return self.send(HTTPStatus.OK, {"ok": True}, cookie=cookie)
+        if path == "/api/admin/line-settings":
+            if not self.authed():
+                return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ยังไม่ได้เข้าสู่ระบบ"})
+            token = str(body.get("channel_access_token", "")).strip()
+            secret = str(body.get("channel_secret", "")).strip()
+            if len(token) < 50 or not re.fullmatch(r"[A-Za-z0-9+/=_-]+", token):
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": "รูปแบบ Channel access token ไม่ถูกต้อง"})
+            if len(secret) < 20 or len(secret) > 128 or not re.fullmatch(r"[A-Za-z0-9_-]+", secret):
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": "รูปแบบ Channel secret ไม่ถูกต้อง"})
+            try:
+                bot = verify_line_token(token)
+            except ValueError as exc:
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            cfg = line_config()
+            cfg.update({"channel_access_token": token, "channel_secret": secret,
+                        "bot_name": str(bot.get("displayName", ""))[:100]})
+            save_line_config(cfg)
+            return self.send(HTTPStatus.OK, {"ok": True, "bot_name": cfg["bot_name"]})
+        if path == "/api/admin/line-target":
+            if not self.authed():
+                return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ยังไม่ได้เข้าสู่ระบบ"})
+            cfg = line_config()
+            if not cfg.get("candidate_id"):
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": "ยังไม่พบกลุ่มหรือผู้รับจาก Webhook"})
+            cfg["target_id"] = cfg.pop("candidate_id")
+            cfg["target_type"] = cfg.pop("candidate_type", "")
+            save_line_config(cfg)
+            return self.send(HTTPStatus.OK, {"ok": True, "target_type": cfg["target_type"]})
         if path == "/api/admin/update":
             if not self.authed():
                 return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ยังไม่ได้เข้าสู่ระบบ"})
@@ -271,6 +388,38 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(HTTPStatus.NOT_FOUND, {"error": "ไม่พบรายการจอง"})
             return self.send(HTTPStatus.OK, {"ok": True})
         return self.send(HTTPStatus.NOT_FOUND, {"error": "ไม่พบหน้านี้"})
+
+    def handle_line_webhook(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > 1_000_000:
+            return self.send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "ข้อมูลใหญ่เกินไป"})
+        raw = self.rfile.read(length)
+        cfg = line_config()
+        secret = cfg.get("channel_secret", "")
+        if not secret:
+            return self.send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "ยังไม่ได้ตั้งค่า LINE"})
+        expected = base64.b64encode(hmac.new(secret.encode(), raw, hashlib.sha256).digest()).decode()
+        supplied = self.headers.get("X-Line-Signature", "")
+        if not hmac.compare_digest(expected, supplied):
+            return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ลายเซ็นไม่ถูกต้อง"})
+        try:
+            payload = json.loads(raw.decode("utf-8") or "{}")
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return self.send(HTTPStatus.BAD_REQUEST, {"error": "ข้อมูลไม่ถูกต้อง"})
+        for event in payload.get("events", []):
+            source = event.get("source") or {}
+            candidate_id, candidate_type = "", source.get("type", "")
+            if candidate_type == "group":
+                candidate_id = source.get("groupId", "")
+            elif candidate_type == "room":
+                candidate_id = source.get("roomId", "")
+            elif candidate_type == "user":
+                candidate_id = source.get("userId", "")
+            if candidate_id:
+                cfg["candidate_id"] = candidate_id
+                cfg["candidate_type"] = candidate_type
+        save_line_config(cfg)
+        return self.send(HTTPStatus.OK, {"ok": True})
 
 def main():
     init_db()

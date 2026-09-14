@@ -1,5 +1,9 @@
 import unittest
+import json
+import tempfile
 from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 from booking import app
 
@@ -25,6 +29,18 @@ class BookingValidationTests(unittest.TestCase):
         body = self.good(); body["phone"] = "123"
         with self.assertRaisesRegex(ValueError, "เบอร์โทร"):
             app.validate_booking(body)
+
+    def test_line_config_is_private(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "line.json"
+            with patch.object(app, "LINE_CONFIG", target):
+                app.save_line_config({"channel_secret": "secret"})
+                self.assertEqual(json.loads(target.read_text())["channel_secret"], "secret")
+                self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+
+    def test_line_alert_skips_until_target_is_ready(self):
+        with patch.object(app, "line_config", return_value={}):
+            self.assertEqual(app.send_line_alert({}), "not_configured")
 
 if __name__ == "__main__":
     unittest.main()
