@@ -23,8 +23,10 @@ HERE = Path(__file__).resolve().parent
 PUBLIC_UI = HERE / "public.html"
 ADMIN_UI = HERE / "admin.html"
 LINE_SETTINGS_UI = HERE / "line-settings.html"
-ADMIN_CONFIG = HERE.parent / "admin" / "config.json"
+ADMIN_CONFIG = Path(os.environ.get("OWL_ADMIN_CONFIG", str(HERE.parent / "admin" / "config.json")))
 LINE_CONFIG = Path(os.environ.get("OWL_LINE_CONFIG", "/root/.secrets/owlsnest-line-alert.json"))
+RESET_CONFIG = Path(os.environ.get("OWL_RESET_CONFIG", "/root/.secrets/owlsnest-admin-reset.json"))
+RESET_UI = HERE / "reset-password.html"
 DB_PATH = Path(os.environ.get("OWL_BOOKING_DB", "/root/owlsnest-data/bookings.sqlite3"))
 HOST = os.environ.get("OWL_BOOKING_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OWL_BOOKING_PORT", "5607"))
@@ -71,6 +73,12 @@ def init_db():
 
 def admin_config():
     return json.loads(ADMIN_CONFIG.read_text(encoding="utf-8"))
+
+def save_admin_config(cfg):
+    temp = ADMIN_CONFIG.with_suffix(".tmp")
+    temp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp.chmod(0o600)
+    temp.replace(ADMIN_CONFIG)
 
 def line_config():
     if not LINE_CONFIG.exists():
@@ -233,6 +241,8 @@ class Handler(BaseHTTPRequestHandler):
             size = len(ADMIN_UI.read_bytes())
         elif path == "/line-settings":
             size = len(LINE_SETTINGS_UI.read_bytes())
+        elif path == "/reset-password":
+            size = len(RESET_UI.read_bytes())
         else:
             self.send_response(HTTPStatus.NOT_FOUND)
             self.end_headers()
@@ -255,6 +265,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(HTTPStatus.OK, ADMIN_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
         if path == "/line-settings":
             return self.send(HTTPStatus.OK, LINE_SETTINGS_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
+        if path == "/reset-password":
+            return self.send(HTTPStatus.OK, RESET_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
         if path == "/api/me":
             return self.send(HTTPStatus.OK, {"authed": self.authed()})
         if path == "/api/admin/line-settings":
@@ -325,6 +337,28 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True, "code": code,
                 "message": "ร้านได้รับคำขอจองแล้ว กรุณารอการโทรยืนยันจากทางร้าน"
             })
+        if path == "/api/reset-password":
+            token = str(body.get("token", ""))
+            new_password = str(body.get("new_password", ""))
+            if len(new_password) < 8:
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": "รหัสผ่านต้องยาวอย่างน้อย 8 ตัว"})
+            try:
+                reset = json.loads(RESET_CONFIG.read_text(encoding="utf-8"))
+                token_ok = hmac.compare_digest(
+                    hashlib.sha256(token.encode()).hexdigest(), reset.get("token_hash", "")
+                )
+                not_expired = int(reset.get("expires", 0)) >= int(time.time())
+            except (FileNotFoundError, ValueError, TypeError, json.JSONDecodeError):
+                token_ok, not_expired = False, False
+            if not token_ok or not not_expired:
+                return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ลิงก์หมดอายุหรือถูกใช้ไปแล้ว"})
+            cfg = admin_config()
+            cfg["salt"] = secrets.token_hex(16)
+            cfg["password_hash"] = hash_password(new_password, cfg["salt"])
+            cfg["secret"] = secrets.token_hex(32)
+            save_admin_config(cfg)
+            RESET_CONFIG.unlink(missing_ok=True)
+            return self.send(HTTPStatus.OK, {"ok": True})
         if path == "/api/login":
             cfg = admin_config()
             ok = hmac.compare_digest(
