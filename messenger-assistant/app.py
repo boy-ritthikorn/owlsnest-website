@@ -27,6 +27,8 @@ DB_FILE = ROOT / "data" / "assistant.db"
 KNOWLEDGE_FILE = ROOT / "knowledge.json"
 MUSIC_FILE = Path("/root/owlsnest-website/data.json")
 GRAPH_VERSION = "v23.0"
+CLINIC_PAGE_ID = "704108133083131"
+CLINIC_ATTRIBUTION_URL = "http://127.0.0.1:5602/facebook-attribution-ingest"
 
 
 def load_env(path: Path) -> dict[str, str]:
@@ -428,6 +430,66 @@ def process_event(event: dict) -> None:
         create_draft(message_id, psid)
 
 
+def clinic_attribution_payload(page_id: str, event: dict) -> dict | None:
+    """Return ad referral metadata only; deliberately exclude message content."""
+    message = event.get("message") if isinstance(event.get("message"), dict) else {}
+    postback = event.get("postback") if isinstance(event.get("postback"), dict) else {}
+    referral = event.get("referral")
+    if not isinstance(referral, dict):
+        referral = message.get("referral")
+    if not isinstance(referral, dict):
+        referral = postback.get("referral")
+    if not isinstance(referral, dict):
+        return None
+    ad_id = str(referral.get("ad_id", "")).strip()
+    psid = str(event.get("sender", {}).get("id", "")).strip()
+    if not psid or not ad_id or not ad_id.isdigit():
+        return None
+    timestamp = event.get("timestamp", now() * 1000)
+    mid = str(message.get("mid", "")).strip()
+    event_key = mid or "referral-" + safe_id(
+        f"{page_id}:{psid}:{ad_id}:{timestamp}:{referral.get('ref', '')}"
+    )
+    return {
+        "page_id": page_id,
+        "psid": psid,
+        "timestamp": timestamp,
+        "event_key": event_key,
+        "ad_id": ad_id,
+        "source": str(referral.get("source", ""))[:80],
+        "type": str(referral.get("type", ""))[:80],
+        "ref": str(referral.get("ref", ""))[:500],
+    }
+
+
+def forward_clinic_attribution(page_id: str, event: dict) -> None:
+    payload = clinic_attribution_payload(page_id, event)
+    secret = config("META_APP_SECRET")
+    if not payload or not secret:
+        return
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    signature = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    try:
+        requests.post(
+            CLINIC_ATTRIBUTION_URL,
+            data=raw,
+            headers={
+                "Content-Type": "application/json",
+                "X-Clinic-Attribution-Signature": signature,
+            },
+            timeout=25,
+        ).raise_for_status()
+    except Exception as exc:
+        print(f"clinic attribution forward failed: {type(exc).__name__}")
+
+
+def process_page_event(page_id: str, event: dict) -> None:
+    if page_id == config("META_PAGE_ID"):
+        process_event(event)
+    elif page_id == CLINIC_PAGE_ID:
+        forward_clinic_attribution(page_id, event)
+
+
 def send_message(psid: str, text: str) -> str:
     data = graph_request(
         "POST",
@@ -651,8 +713,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.send_bytes(200, b"EVENT_RECEIVED", "text/plain")
             for entry in payload.get("entry", []):
+                page_id = str(entry.get("id", ""))
                 for event in entry.get("messaging", []):
-                    threading.Thread(target=process_event, args=(event,), daemon=True).start()
+                    threading.Thread(target=process_page_event, args=(page_id, event), daemon=True).start()
             return
 
         if url.path == "/setup":

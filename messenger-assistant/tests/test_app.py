@@ -145,6 +145,35 @@ class AssistantTests(unittest.TestCase):
         signature = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         self.assertTrue(hmac.compare_digest(signature, signature))
 
+    def test_clinic_payload_keeps_only_ad_trace(self):
+        event = {
+            "sender": {"id": "clinic-customer"},
+            "timestamp": 1789380000000,
+            "message": {
+                "mid": "clinic-mid-1",
+                "text": "ข้อมูลการรักษาที่ห้ามส่งต่อ",
+                "referral": {
+                    "source": "ADS",
+                    "type": "OPEN_THREAD",
+                    "ad_id": "120000000000001",
+                    "ref": "campaign-marker",
+                },
+            },
+        }
+        payload = app.clinic_attribution_payload(app.CLINIC_PAGE_ID, event)
+        self.assertEqual(payload["ad_id"], "120000000000001")
+        self.assertEqual(payload["psid"], "clinic-customer")
+        serialized = json.dumps(payload, ensure_ascii=False)
+        self.assertNotIn("ข้อมูลการรักษา", serialized)
+        self.assertNotIn("text", payload)
+
+    @patch("app.forward_clinic_attribution")
+    @patch("app.process_event")
+    def test_clinic_event_never_enters_owl_messages(self, process_event, forward):
+        app.process_page_event(app.CLINIC_PAGE_ID, {"message": {"text": "private"}})
+        forward.assert_called_once()
+        process_event.assert_not_called()
+
     def test_admin_setup_token_is_single_use(self):
         env_file = Path(self.temp.name) / "runtime.env"
         note_file = Path(self.temp.name) / "credential.txt"
