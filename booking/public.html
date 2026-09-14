@@ -22,6 +22,7 @@ form{display:grid;grid-template-columns:1fr 1fr;gap:15px}label{display:block;fon
     <section class="card formcard">
       <div id="formbox"><h2>รายละเอียดการจอง</h2><p class="sub">การส่งแบบฟอร์มยังไม่ถือว่าได้รับการยืนยัน</p>
       <form id="booking">
+        <input type="hidden" name="form_ts" id="form_ts">
         <label>วันที่<input type="date" id="date" name="date" required></label>
         <label>เวลา<select name="time" required><option value="">เลือกเวลา</option><option>17:00</option><option>17:30</option><option>18:00</option><option>18:30</option><option>19:00</option><option>19:30</option><option>20:00</option><option>20:30</option><option>21:00</option><option>21:30</option><option>22:00</option><option>22:30</option><option>23:00</option></select></label>
         <label>จำนวนผู้ใช้บริการ<select name="party_size" required><option value="">เลือกจำนวน</option></select></label>
@@ -40,7 +41,8 @@ form{display:grid;grid-template-columns:1fr 1fr;gap:15px}label{display:block;fon
 </main>
 <script>
 var form=document.getElementById('booking'),dateEl=document.getElementById('date'),party=form.elements.party_size;
+document.getElementById('form_ts').value=Math.floor(Date.now()/1000);
 for(var i=1;i<=30;i++){var o=document.createElement('option');o.value=i;o.textContent=i+' ท่าน';party.appendChild(o)}
 var now=new Date(),local=new Date(now.getTime()-now.getTimezoneOffset()*60000),min=local.toISOString().slice(0,10),maxd=new Date(local);maxd.setDate(maxd.getDate()+90);dateEl.min=min;dateEl.max=maxd.toISOString().slice(0,10);dateEl.value=min;
-form.addEventListener('submit',async function(e){e.preventDefault();var btn=form.querySelector('button'),msg=document.getElementById('msg');btn.disabled=true;msg.textContent='กำลังส่งคำขอ…';var data=Object.fromEntries(new FormData(form).entries());try{var r=await fetch('/booking/api/reservations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),out=await r.json();if(!r.ok)throw new Error(out.error||'ส่งคำขอไม่สำเร็จ');document.getElementById('code').textContent=out.code;document.getElementById('formbox').classList.add('hide');document.getElementById('success').classList.remove('hide');if(window.fbq)fbq('track','Lead',{content_name:'ส่งคำขอจองโต๊ะ'});}catch(err){msg.textContent=err.message;btn.disabled=false}});
+form.addEventListener('submit',async function(e){e.preventDefault();var btn=form.querySelector('button'),msg=document.getElementById('msg');btn.disabled=true;msg.textContent='กำลังส่งคำขอ…';var data=Object.fromEntries(new FormData(form).entries());try{var r=await fetch('/booking/api/reservations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}),out=await r.json();if(!r.ok)throw new Error(out.error||'ส่งคำขอไม่สำเร็จ');document.getElementById('code').textContent=out.code;document.getElementById('formbox').classList.add('hide');document.getElementById('success').classList.remove('hide');if(out.lead!==false&&window.fbq)fbq('track','Lead',{content_name:'ส่งคำขอจองโต๊ะ'});}catch(err){msg.textContent=err.message;btn.disabled=false}});
 </script></body></html>

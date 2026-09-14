@@ -35,6 +35,7 @@ TZ = ZoneInfo("Asia/Bangkok")
 SESSION_HOURS = 24 * 14
 VALID_STATUSES = {"pending", "confirmed", "no_answer", "cancelled", "seated", "completed", "no_show"}
 RATE_LIMIT = {}
+MIN_FILL_SECONDS = 3
 
 def db():
     con = sqlite3.connect(DB_PATH)
@@ -62,12 +63,24 @@ def init_db():
                 status TEXT NOT NULL DEFAULT 'pending',
                 assigned_tables TEXT NOT NULL DEFAULT '',
                 staff_note TEXT NOT NULL DEFAULT '',
-                line_notify_status TEXT NOT NULL DEFAULT ''
+                line_notify_status TEXT NOT NULL DEFAULT '',
+                spam_status TEXT NOT NULL DEFAULT 'ok',
+                spam_reasons TEXT NOT NULL DEFAULT '',
+                source_ip TEXT NOT NULL DEFAULT '',
+                user_agent TEXT NOT NULL DEFAULT ''
             )
         """)
         columns = {row[1] for row in con.execute("PRAGMA table_info(bookings)")}
         if "line_notify_status" not in columns:
             con.execute("ALTER TABLE bookings ADD COLUMN line_notify_status TEXT NOT NULL DEFAULT ''")
+        if "spam_status" not in columns:
+            con.execute("ALTER TABLE bookings ADD COLUMN spam_status TEXT NOT NULL DEFAULT 'ok'")
+        if "spam_reasons" not in columns:
+            con.execute("ALTER TABLE bookings ADD COLUMN spam_reasons TEXT NOT NULL DEFAULT ''")
+        if "source_ip" not in columns:
+            con.execute("ALTER TABLE bookings ADD COLUMN source_ip TEXT NOT NULL DEFAULT ''")
+        if "user_agent" not in columns:
+            con.execute("ALTER TABLE bookings ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
         con.execute("CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(booking_date, booking_time)")
     DB_PATH.chmod(0o600)
 
@@ -188,6 +201,31 @@ def validate_booking(body):
 def booking_code(booking_date):
     return "OWL-" + booking_date.replace("-", "")[2:] + "-" + secrets.token_hex(2).upper()
 
+def spam_reasons(body, values, now=None):
+    """Return reasons for quarantine; one weak signal alone is not enough."""
+    if str(body.get("website", "")).strip():
+        return ["honeypot"]
+
+    now = time.time() if now is None else now
+    try:
+        form_ts = int(body.get("form_ts", 0))
+    except (TypeError, ValueError):
+        form_ts = 0
+    if form_ts > 0 and now - form_ts < MIN_FILL_SECONDS:
+        return ["too_fast"]
+
+    reasons = []
+    digits = re.sub(r"\D", "", values[5])
+    if not re.fullmatch(r"(?:0\d{9}|66\d{9})", digits):
+        reasons.append("phone_format")
+
+    text = f"{values[4]} {values[7]}".strip()
+    if re.search(r"(?:https?://|www\.|\[url|t\.me/|telegra\.ph)", text, re.I):
+        reasons.append("link")
+    if not re.search(r"[\u0E00-\u0E7F]", text):
+        reasons.append("no_thai")
+    return reasons if len(reasons) >= 2 else []
+
 def limited(ip):
     now = time.time()
     recent = [stamp for stamp in RATE_LIMIT.get(ip, []) if now - stamp < 600]
@@ -290,15 +328,27 @@ class Handler(BaseHTTPRequestHandler):
             query = parse_qs(parsed.query)
             target = query.get("date", [datetime.now(TZ).date().isoformat()])[0]
             status = query.get("status", [""])[0]
+            view = query.get("view", ["inbox"])[0]
+            if view not in {"inbox", "review", "all"}:
+                view = "inbox"
             sql = "SELECT * FROM bookings WHERE booking_date = ?"
             args = [target]
+            if view == "review":
+                sql += " AND spam_status = 'review'"
+            elif view == "inbox":
+                sql += " AND spam_status <> 'review'"
             if status in VALID_STATUSES:
                 sql += " AND status = ?"
                 args.append(status)
             sql += " ORDER BY booking_time, created_at"
             with db() as con:
                 rows = [dict(row) for row in con.execute(sql, args)]
-            return self.send(HTTPStatus.OK, {"bookings": rows, "date": target})
+                review_count = con.execute(
+                    "SELECT COUNT(*) FROM bookings WHERE booking_date=? AND spam_status='review'",
+                    (target,),
+                ).fetchone()[0]
+            return self.send(HTTPStatus.OK, {"bookings": rows, "date": target,
+                                             "view": view, "review_count": review_count})
         return self.send(HTTPStatus.NOT_FOUND, {"error": "ไม่พบหน้านี้"})
 
     def do_POST(self):
@@ -310,31 +360,33 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self.send(HTTPStatus.BAD_REQUEST, {"error": "ข้อมูลไม่ถูกต้อง"})
         if path == "/api/reservations":
-            if body.get("website"):
-                return self.send(HTTPStatus.OK, {"ok": True})
             if limited(self.client_ip()):
                 return self.send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "ส่งคำขอหลายครั้งเกินไป กรุณารอสักครู่"})
             try:
                 values = validate_booking(body)
             except ValueError as exc:
                 return self.send(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            reasons = spam_reasons(body, values)
+            spam_status = "review" if reasons else "ok"
             now = datetime.now(TZ).isoformat(timespec="seconds")
             code = booking_code(values[0])
             with db() as con:
                 cur = con.execute("""
                     INSERT INTO bookings
                     (code, created_at, updated_at, booking_date, booking_time, party_size,
-                     preference, customer_name, phone, contact_channel, note)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (code, now, now, *values))
+                     preference, customer_name, phone, contact_channel, note,
+                     spam_status, spam_reasons, source_ip, user_agent)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (code, now, now, *values, spam_status, ",".join(reasons),
+                      self.client_ip()[:64], self.headers.get("User-Agent", "")[:512]))
                 booking_id = cur.lastrowid
                 booking = dict(con.execute("SELECT * FROM bookings WHERE id=?", (booking_id,)).fetchone())
-            notify_status = send_line_alert(booking)
+            notify_status = "quarantined" if reasons else send_line_alert(booking)
             with db() as con:
                 con.execute("UPDATE bookings SET line_notify_status=? WHERE id=?",
                             (notify_status, booking_id))
             return self.send(HTTPStatus.CREATED, {
-                "ok": True, "code": code,
+                "ok": True, "code": code, "lead": not reasons,
                 "message": "ร้านได้รับคำขอจองแล้ว กรุณารอการโทรยืนยันจากทางร้าน"
             })
         if path == "/api/reset-password":

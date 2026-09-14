@@ -30,6 +30,33 @@ class BookingValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "เบอร์โทร"):
             app.validate_booking(body)
 
+    def test_real_thai_booking_is_not_spam(self):
+        body = self.good(); body["form_ts"] = 100
+        values = app.validate_booking(body)
+        self.assertEqual(app.spam_reasons(body, values, now=110), [])
+
+    def test_honeypot_is_quarantined(self):
+        body = self.good(); body["website"] = "https://spam.example"
+        values = app.validate_booking(body)
+        self.assertEqual(app.spam_reasons(body, values), ["honeypot"])
+
+    def test_too_fast_is_quarantined(self):
+        body = self.good(); body["form_ts"] = 100
+        values = app.validate_booking(body)
+        self.assertEqual(app.spam_reasons(body, values, now=101), ["too_fast"])
+
+    def test_two_weak_signals_are_quarantined(self):
+        body = self.good(); body.update({"name": "Cheap SEO", "phone": "+1 202 555 0182",
+                                        "note": "visit https://spam.example"})
+        values = app.validate_booking(body)
+        self.assertEqual(app.spam_reasons(body, values, now=100),
+                         ["phone_format", "link", "no_thai"])
+
+    def test_one_weak_signal_does_not_block_customer(self):
+        body = self.good(); body.update({"name": "John", "note": "Birthday"})
+        values = app.validate_booking(body)
+        self.assertEqual(app.spam_reasons(body, values, now=100), [])
+
     def test_line_config_is_private(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "line.json"
