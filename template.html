@@ -196,6 +196,7 @@ nav a:hover{color:var(--gold)}
 .booking-promo{background:#0e0e10;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .booking-promo-grid{display:grid;gap:34px;align-items:center}
 .booking-promo-media{margin:0;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
+.booking-promo-media picture{display:block}
 .booking-promo-media img{width:100%;aspect-ratio:3/2;object-fit:cover}
 .booking-promo-copy h2{font-family:var(--serif);font-size:clamp(30px,5.4vw,48px);font-weight:400;line-height:1.15;color:#fff;margin:10px 0 16px}
 .booking-promo-copy h2 strong{color:#ef3f38;font-family:var(--sans);font-weight:700}
@@ -379,6 +380,7 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
   .booking-promo-copy{order:-1}
   .booking-promo-copy h2{font-size:31px}
   .booking-promo-media{width:78%;max-width:280px;justify-self:center}
+  .booking-promo-media img{aspect-ratio:4/5}
 }
 </style>
 </head>
@@ -431,7 +433,10 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
 <section class="booking-promo" id="booking-promotion">
   <div class="wrap booking-promo-grid">
     <figure class="booking-promo-media">
-      <img src="images/masterpeet-booking-15.webp?v=1" alt="จองโต๊ะออนไลน์ OWL'S NEST รับส่วนลดสินค้า Master Peet Shop 15 เปอร์เซ็นต์" width="1536" height="1024">
+      <picture>
+        <source media="(max-width:699px)" srcset="images/masterpeet-booking-15-mobile.webp?v=1">
+        <img src="images/masterpeet-booking-15.webp?v=1" alt="จองโต๊ะออนไลน์ OWL'S NEST รับส่วนลดสินค้า Master Peet Shop 15 เปอร์เซ็นต์" width="1536" height="1024">
+      </picture>
     </figure>
     <div class="booking-promo-copy">
       <div class="eyebrow">Online Booking Benefit</div>
