@@ -192,6 +192,17 @@ nav a:hover{color:var(--gold)}
 .btn-ghost{color:var(--gold);background:rgba(10,10,11,.4)}
 .btn-ghost:hover{background:rgba(200,164,92,.14)}
 
+/* ---------- booking promotion ---------- */
+.booking-promo{background:#0e0e10;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.booking-promo-grid{display:grid;gap:34px;align-items:center}
+.booking-promo-media{margin:0;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
+.booking-promo-media img{width:100%;aspect-ratio:3/2;object-fit:cover}
+.booking-promo-copy h2{font-family:var(--serif);font-size:clamp(30px,5.4vw,48px);font-weight:400;line-height:1.15;color:#fff;margin:10px 0 16px}
+.booking-promo-copy h2 strong{color:#ef3f38;font-family:var(--sans);font-weight:700}
+.booking-promo-copy p{color:var(--muted);margin:0;max-width:560px}
+.booking-promo-note{display:block;color:#746e66;font-size:11px;margin-top:14px}
+.booking-promo .cta-row{justify-content:flex-start;margin-top:25px}
+
 /* ---------- sections ---------- */
 section{padding:78px 0}
 section:nth-of-type(even){background:var(--bg-2)}
@@ -338,6 +349,7 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
 .mobile-bar .s{color:var(--gold)}
 
 @media(min-width:700px){
+  .booking-promo-grid{grid-template-columns:minmax(0,1.45fr) minmax(290px,.75fr)}
   .about-grid{grid-template-columns:repeat(3,1fr)}
   .live-hero{grid-template-columns:1.6fr 1fr 1fr}
   .sched{grid-template-columns:repeat(2,1fr)}
@@ -362,6 +374,9 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
   .hero{min-height:76vh;padding:52px 0 46px;background-position:center 45%}
   .hero-tag{line-height:1.75}
   .hero-meta{gap:8px}
+  .booking-promo{padding:42px 0}
+  .booking-promo-grid{gap:24px}
+  .booking-promo-copy h2{font-size:31px}
 }
 </style>
 </head>
@@ -409,6 +424,25 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
     </div>
   </div>
 </div>
+
+<!-- ===== ONLINE BOOKING PROMOTION ===== -->
+<section class="booking-promo" id="booking-promotion">
+  <div class="wrap booking-promo-grid">
+    <figure class="booking-promo-media">
+      <img src="images/masterpeet-booking-15.webp?v=1" alt="จองโต๊ะออนไลน์ OWL'S NEST รับส่วนลดสินค้า Master Peet Shop 15 เปอร์เซ็นต์" width="1536" height="1024">
+    </figure>
+    <div class="booking-promo-copy">
+      <div class="eyebrow">Online Booking Benefit</div>
+      <h2>จองโต๊ะออนไลน์<br>รับส่วนลด <strong>15%</strong></h2>
+      <p>ส่งคำขอจองโต๊ะผ่านเว็บไซต์ OWL'S NEST แล้วใช้เลขที่การจองเป็นหลักฐานรับสิทธิ์ส่วนลดสินค้า Master Peet Shop</p>
+      <div class="cta-row">
+        <a href="/booking/" class="btn btn-solid">จองโต๊ะรับสิทธิ์</a>
+        <a href="https://www.facebook.com/profile.php?id=61580303955615" class="btn btn-ghost" target="_blank" rel="noopener">ดูสินค้า Master Peet</a>
+      </div>
+      <small class="booking-promo-note">เงื่อนไขและระยะเวลาโปรโมชั่นเป็นไปตามที่ร้านกำหนด</small>
+    </div>
+  </div>
+</section>
 
 <!-- ===== ABOUT ===== -->
 <section id="about">
