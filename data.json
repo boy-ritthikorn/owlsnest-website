@@ -1,12 +1,22 @@
 {
   "music": [
     {
+      "en": "Tuesday",
+      "th": "คืนวันอังคาร",
+      "slots": [
+        {
+          "genre": "BLUES GROUP",
+          "time": "20:30 – 22:30"
+        }
+      ]
+    },
+    {
       "en": "Wednesday",
       "th": "คืนวันพุธ",
       "slots": [
         {
-          "genre": "Live Acoustic",
-          "time": "เวลาโปรดสอบถามทางร้าน"
+          "genre": "Acoustic Rock",
+          "time": "20:30 – 22:30"
         }
       ]
     },
@@ -15,7 +25,7 @@
       "th": "คืนวันพฤหัสบดี",
       "slots": [
         {
-          "genre": "Country Folk Music",
+          "genre": "Country Folk",
           "time": "21:30 – 23:00"
         }
       ]
@@ -29,7 +39,7 @@
           "time": "19:30 – 21:00"
         },
         {
-          "genre": "Oldies by the Pianist",
+          "genre": "Oldies",
           "time": "21:30 – 23:00"
         }
       ]
@@ -39,8 +49,8 @@
       "th": "คืนวันเสาร์",
       "slots": [
         {
-          "genre": "Blue Rock Music",
-          "time": "22:00 – 23:30"
+          "genre": "BLUES ROCK",
+          "time": "21:30 – 23:30"
         }
       ]
     }
