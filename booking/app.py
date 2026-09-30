@@ -9,6 +9,7 @@ import re
 import secrets
 import sqlite3
 import time
+import calendar
 from datetime import date, datetime, timedelta
 from http import HTTPStatus
 from http.cookies import SimpleCookie
@@ -62,6 +63,7 @@ def init_db():
                 note TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'pending',
                 assigned_tables TEXT NOT NULL DEFAULT '',
+                table_count INTEGER NOT NULL DEFAULT 1,
                 staff_note TEXT NOT NULL DEFAULT '',
                 line_notify_status TEXT NOT NULL DEFAULT '',
                 spam_status TEXT NOT NULL DEFAULT 'ok',
@@ -73,6 +75,8 @@ def init_db():
         columns = {row[1] for row in con.execute("PRAGMA table_info(bookings)")}
         if "line_notify_status" not in columns:
             con.execute("ALTER TABLE bookings ADD COLUMN line_notify_status TEXT NOT NULL DEFAULT ''")
+        if "table_count" not in columns:
+            con.execute("ALTER TABLE bookings ADD COLUMN table_count INTEGER NOT NULL DEFAULT 1")
         if "spam_status" not in columns:
             con.execute("ALTER TABLE bookings ADD COLUMN spam_status TEXT NOT NULL DEFAULT 'ok'")
         if "spam_reasons" not in columns:
@@ -200,6 +204,44 @@ def validate_booking(body):
 
 def booking_code(booking_date):
     return "OWL-" + booking_date.replace("-", "")[2:] + "-" + secrets.token_hex(2).upper()
+
+def month_bounds(value):
+    if not re.fullmatch(r"\d{4}-\d{2}", str(value or "")):
+        raise ValueError("รูปแบบเดือนไม่ถูกต้อง")
+    try:
+        first = date.fromisoformat(f"{value}-01")
+    except ValueError as exc:
+        raise ValueError("รูปแบบเดือนไม่ถูกต้อง") from exc
+    last = first.replace(day=calendar.monthrange(first.year, first.month)[1])
+    return first, last
+
+def booking_month_summary(value):
+    first, last = month_bounds(value)
+    sql = """
+        SELECT booking_date,
+               SUM(CASE WHEN status NOT IN ('cancelled', 'no_show') THEN 1 ELSE 0 END) AS booking_count,
+               SUM(CASE WHEN status NOT IN ('cancelled', 'no_show') THEN table_count ELSE 0 END) AS table_count,
+               SUM(CASE WHEN status NOT IN ('cancelled', 'no_show') THEN party_size ELSE 0 END) AS people_count,
+               SUM(CASE WHEN status IN ('confirmed', 'seated', 'completed') THEN 1 ELSE 0 END) AS confirmed_count,
+               SUM(CASE WHEN status IN ('pending', 'no_answer') THEN 1 ELSE 0 END) AS pending_count,
+               SUM(CASE WHEN status NOT IN ('cancelled', 'no_show') AND TRIM(assigned_tables) <> '' THEN 1 ELSE 0 END) AS assigned_count,
+               SUM(CASE WHEN status IN ('cancelled', 'no_show') THEN 1 ELSE 0 END) AS cancelled_count
+          FROM bookings
+         WHERE booking_date BETWEEN ? AND ? AND spam_status <> 'review'
+         GROUP BY booking_date
+         ORDER BY booking_date
+    """
+    with db() as con:
+        rows = [dict(row) for row in con.execute(sql, (first.isoformat(), last.isoformat()))]
+    totals = {
+        "booking_count": sum(row["booking_count"] for row in rows),
+        "table_count": sum(row["table_count"] for row in rows),
+        "people_count": sum(row["people_count"] for row in rows),
+        "confirmed_count": sum(row["confirmed_count"] for row in rows),
+        "pending_count": sum(row["pending_count"] for row in rows),
+        "assigned_count": sum(row["assigned_count"] for row in rows),
+    }
+    return rows, totals
 
 def spam_reasons(body, values, now=None):
     """Return reasons for quarantine; one weak signal alone is not enough."""
@@ -349,6 +391,16 @@ class Handler(BaseHTTPRequestHandler):
                 ).fetchone()[0]
             return self.send(HTTPStatus.OK, {"bookings": rows, "date": target,
                                              "view": view, "review_count": review_count})
+        if path == "/api/admin/calendar":
+            if not self.authed():
+                return self.send(HTTPStatus.UNAUTHORIZED, {"error": "ยังไม่ได้เข้าสู่ระบบ"})
+            query = parse_qs(parsed.query)
+            month = query.get("month", [datetime.now(TZ).date().strftime("%Y-%m")])[0]
+            try:
+                rows, totals = booking_month_summary(month)
+            except ValueError as exc:
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            return self.send(HTTPStatus.OK, {"month": month, "days": rows, "totals": totals})
         return self.send(HTTPStatus.NOT_FOUND, {"error": "ไม่พบหน้านี้"})
 
     def do_POST(self):
@@ -464,12 +516,18 @@ class Handler(BaseHTTPRequestHandler):
             if status not in VALID_STATUSES:
                 return self.send(HTTPStatus.BAD_REQUEST, {"error": "สถานะไม่ถูกต้อง"})
             tables = str(body.get("assigned_tables", "")).strip()[:100]
+            try:
+                table_count = int(body.get("table_count", 1))
+            except (TypeError, ValueError):
+                table_count = 0
+            if not 1 <= table_count <= 20:
+                return self.send(HTTPStatus.BAD_REQUEST, {"error": "จำนวนโต๊ะต้องอยู่ระหว่าง 1–20 โต๊ะ"})
             staff_note = str(body.get("staff_note", "")).strip()[:500]
             now = datetime.now(TZ).isoformat(timespec="seconds")
             with db() as con:
                 cur = con.execute("""
-                    UPDATE bookings SET status=?, assigned_tables=?, staff_note=?, updated_at=? WHERE id=?
-                """, (status, tables, staff_note, now, booking_id))
+                    UPDATE bookings SET status=?, assigned_tables=?, table_count=?, staff_note=?, updated_at=? WHERE id=?
+                """, (status, tables, table_count, staff_note, now, booking_id))
             if not cur.rowcount:
                 return self.send(HTTPStatus.NOT_FOUND, {"error": "ไม่พบรายการจอง"})
             return self.send(HTTPStatus.OK, {"ok": True})

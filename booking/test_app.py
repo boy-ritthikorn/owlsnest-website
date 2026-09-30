@@ -69,5 +69,56 @@ class BookingValidationTests(unittest.TestCase):
         with patch.object(app, "line_config", return_value={}):
             self.assertEqual(app.send_line_alert({}), "not_configured")
 
+    def test_month_bounds(self):
+        first, last = app.month_bounds("2028-02")
+        self.assertEqual(first.isoformat(), "2028-02-01")
+        self.assertEqual(last.isoformat(), "2028-02-29")
+        with self.assertRaisesRegex(ValueError, "รูปแบบเดือน"):
+            app.month_bounds("2028-13")
+
+    def test_booking_month_summary_excludes_spam_and_cancelled_from_active_total(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "bookings.sqlite3"
+            with patch.object(app, "DB_PATH", target):
+                app.init_db()
+                common = ("2026-10-02T12:00:00+07:00",) * 2
+                rows = [
+                    ("OWL-A", *common, "2026-10-02", "19:00", 4, "confirmed", "A1", "ok"),
+                    ("OWL-B", *common, "2026-10-02", "20:00", 2, "pending", "", "ok"),
+                    ("OWL-C", *common, "2026-10-03", "19:30", 3, "cancelled", "B1", "ok"),
+                    ("OWL-D", *common, "2026-10-04", "18:00", 8, "pending", "", "review"),
+                ]
+                with app.db() as con:
+                    con.executemany("""
+                        INSERT INTO bookings
+                        (code, created_at, updated_at, booking_date, booking_time, party_size,
+                         customer_name, phone, status, assigned_tables, spam_status)
+                        VALUES (?, ?, ?, ?, ?, ?, 'ลูกค้า', '0900000000', ?, ?, ?)
+                    """, rows)
+                days, totals = app.booking_month_summary("2026-10")
+                self.assertEqual(len(days), 2)
+                self.assertEqual(days[0]["booking_count"], 2)
+                self.assertEqual(days[0]["table_count"], 2)
+                self.assertEqual(days[0]["people_count"], 6)
+                self.assertEqual(days[0]["confirmed_count"], 1)
+                self.assertEqual(days[0]["assigned_count"], 1)
+                self.assertEqual(days[1]["booking_count"], 0)
+                self.assertEqual(days[1]["cancelled_count"], 1)
+                self.assertEqual(totals["booking_count"], 2)
+                self.assertEqual(totals["table_count"], 2)
+
+    def test_init_db_adds_table_count_to_existing_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "bookings.sqlite3"
+            import sqlite3
+            con = sqlite3.connect(target)
+            con.execute("CREATE TABLE bookings (id INTEGER PRIMARY KEY, booking_date TEXT, booking_time TEXT)")
+            con.commit()
+            con.close()
+            with patch.object(app, "DB_PATH", target):
+                app.init_db()
+                columns = {row[1] for row in app.db().execute("PRAGMA table_info(bookings)")}
+                self.assertIn("table_count", columns)
+
 if __name__ == "__main__":
     unittest.main()
