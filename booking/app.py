@@ -38,6 +38,13 @@ VALID_STATUSES = {"pending", "confirmed", "no_answer", "cancelled", "seated", "c
 RATE_LIMIT = {}
 MIN_FILL_SECONDS = 3
 
+def booking_is_open():
+    return os.environ.get("OWL_BOOKING_OPEN", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+def public_ui():
+    state = "true" if booking_is_open() else "false"
+    return PUBLIC_UI.read_text(encoding="utf-8").replace("__BOOKING_OPEN__", state)
+
 def db():
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
@@ -316,7 +323,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         path = urlparse(self.path).path.rstrip("/") or "/"
         if path == "/":
-            size = len(PUBLIC_UI.read_bytes())
+            size = len(public_ui().encode("utf-8"))
         elif path == "/admin":
             size = len(ADMIN_UI.read_bytes())
         elif path == "/line-settings":
@@ -340,7 +347,7 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         if path == "/":
-            return self.send(HTTPStatus.OK, PUBLIC_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
+            return self.send(HTTPStatus.OK, public_ui(), "text/html; charset=utf-8")
         if path == "/admin":
             return self.send(HTTPStatus.OK, ADMIN_UI.read_text(encoding="utf-8"), "text/html; charset=utf-8")
         if path == "/line-settings":
@@ -412,6 +419,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self.send(HTTPStatus.BAD_REQUEST, {"error": "ข้อมูลไม่ถูกต้อง"})
         if path == "/api/reservations":
+            if not booking_is_open():
+                return self.send(HTTPStatus.SERVICE_UNAVAILABLE, {
+                    "error": "ขณะนี้โต๊ะเต็ม ทางร้านปิดรับจองออนไลน์ชั่วคราว"
+                })
             if limited(self.client_ip()):
                 return self.send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "ส่งคำขอหลายครั้งเกินไป กรุณารอสักครู่"})
             try:

@@ -71,6 +71,8 @@ diff /tmp/before.html /tmp/after.html
 | โฟลเดอร์เว็บจริง | `/var/www/owlsnest/` |
 | หลังบ้าน (systemd) | `owl-admin.service` — พอร์ต `127.0.0.1:5605` |
 | ระบบจอง (systemd) | `owl-booking.service` — พอร์ต `127.0.0.1:5607` |
+
+ปิดรับคำขอจองใหม่ชั่วคราวได้ด้วย environment `OWL_BOOKING_OPEN=0` แล้ว restart `owl-booking.service`; หลังบ้านและรายการเดิมยังใช้งานได้ตามปกติ
 | nginx โดเมนใหม่ | `/etc/nginx/sites-available/owlsnestbar` |
 | nginx ลิงก์เก่า `/owl/` | 301 ไป `https://owlsnestbar.com` |
 | SSL | Let's Encrypt (certbot ต่ออายุอัตโนมัติ) |

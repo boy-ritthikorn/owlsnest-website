@@ -17,6 +17,14 @@ class BookingValidationTests(unittest.TestCase):
         values = app.validate_booking(self.good())
         self.assertEqual(values[2], 4)
         self.assertEqual(values[5], "0901234567")
+
+    def test_booking_switch(self):
+        with patch.dict("os.environ", {"OWL_BOOKING_OPEN": "0"}):
+            self.assertFalse(app.booking_is_open())
+            self.assertIn('data-booking-open="false"', app.public_ui())
+        with patch.dict("os.environ", {"OWL_BOOKING_OPEN": "1"}):
+            self.assertTrue(app.booking_is_open())
+            self.assertIn('data-booking-open="true"', app.public_ui())
     def test_invalid_time(self):
         body = self.good(); body["time"] = "16:30"
         with self.assertRaisesRegex(ValueError, "17:00"):
