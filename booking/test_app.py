@@ -25,6 +25,24 @@ class BookingValidationTests(unittest.TestCase):
         with patch.dict("os.environ", {"OWL_BOOKING_OPEN": "1"}):
             self.assertTrue(app.booking_is_open())
             self.assertIn('data-booking-open="true"', app.public_ui())
+
+    def test_wine_event_booking_uses_fixed_schedule_and_tag(self):
+        class EventDate(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2026, 11, 10, 12, 0, tzinfo=tz)
+        body = self.good()
+        body.update({"event": "wine-tasting-2026-11-24", "date": "2026-11-20", "time": "20:30"})
+        with patch.object(app, "datetime", EventDate):
+            values = app.prepare_booking(body)
+        self.assertEqual(values[0], "2026-11-24")
+        self.assertEqual(values[1], "19:00")
+        self.assertTrue(values[-1].startswith("[Wine Tasting · 24 Nov 2026]"))
+
+    def test_unknown_event_is_rejected(self):
+        body = self.good(); body["event"] = "unknown"
+        with self.assertRaisesRegex(ValueError, "ไม่พบกิจกรรม"):
+            app.prepare_booking(body)
     def test_invalid_time(self):
         body = self.good(); body["time"] = "16:30"
         with self.assertRaisesRegex(ValueError, "17:00"):

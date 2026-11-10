@@ -110,6 +110,32 @@ src="https://www.facebook.com/tr?id=1078746361515763&amp;ev=PageView&amp;noscrip
 }
 </script>
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Taste of Spain Wine Tasting",
+  "description": "ชิมไวน์สเปน 7 ชนิดจาก 7 แคว้น ที่ Owl's Nest Bar & Bistro",
+  "startDate": "2026-11-24T19:00:00+07:00",
+  "endDate": "2026-11-24T21:00:00+07:00",
+  "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+  "eventStatus": "https://schema.org/EventScheduled",
+  "image": "https://owlsnestbar.com/images/wine-tasting-2026-11-24.jpg",
+  "location": {
+    "@type": "Place",
+    "name": "Owl's Nest Bar & Bistro",
+    "address": "58/2 ถนนหอการค้า ตำบลคลองข่อย อำเภอปากเกร็ด จังหวัดนนทบุรี 11120"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "2500",
+    "priceCurrency": "THB",
+    "availability": "https://schema.org/LimitedAvailability",
+    "url": "https://owlsnestbar.com/booking/?event=wine-tasting-2026-11-24"
+  }
+}
+</script>
+
 <style>
 :root{
   --bg:#0a0a0b;
@@ -203,6 +229,22 @@ nav a:hover{color:var(--gold)}
 .booking-promo-copy p{color:var(--muted);margin:0;max-width:560px}
 .booking-promo-note{display:block;color:#746e66;font-size:11px;margin-top:14px}
 .booking-promo .cta-row{justify-content:flex-start;margin-top:25px}
+
+/* ---------- limited-time wine tasting ---------- */
+.event-alert{background:#9b1620;color:#fff;text-align:center;padding:9px 16px;font-size:13px;letter-spacing:.03em}
+.event-alert a{color:#fff;text-decoration:underline;text-underline-offset:3px;font-weight:600}
+.wine-event{background:linear-gradient(135deg,#160d09 0,#0d0b0b 55%,#1d1309 100%);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.wine-event-grid{display:grid;gap:34px;align-items:center}
+.wine-event-media{margin:0;border:1px solid rgba(231,213,168,.35);overflow:hidden;background:#09090b}
+.wine-event-media img{width:100%;height:auto;aspect-ratio:1/1;object-fit:cover}
+.wine-event-copy h2{font-family:var(--serif);font-size:clamp(38px,6vw,66px);font-weight:400;line-height:1;color:#fff;margin:10px 0 18px}
+.wine-event-copy h2 span{display:block;color:var(--gold-lt);font-style:italic;font-size:.68em;margin-top:8px}
+.event-facts{display:grid;gap:10px;margin:22px 0;color:var(--text)}
+.event-fact{border-left:2px solid var(--gold);padding-left:13px}
+.event-fact strong{display:block;color:var(--gold-lt);font-size:17px}
+.event-price{font-family:var(--serif);font-size:34px;color:#fff;margin:22px 0 0}.event-price small{font-family:var(--sans);font-size:13px;color:var(--muted)}
+.wine-event .cta-row{justify-content:flex-start;margin-top:25px}
+.event-note{display:block;color:var(--muted);font-size:12px;margin-top:14px}
 
 /* ---------- sections ---------- */
 section{padding:78px 0}
@@ -350,6 +392,7 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
 .mobile-bar .s{color:var(--gold)}
 
 @media(min-width:700px){
+  .wine-event-grid{grid-template-columns:minmax(320px,.9fr) minmax(330px,1.1fr)}
   .booking-promo-grid{grid-template-columns:minmax(0,1.45fr) minmax(290px,.75fr)}
   .about-grid{grid-template-columns:repeat(3,1fr)}
   .live-hero{grid-template-columns:1.6fr 1fr 1fr}
@@ -385,6 +428,10 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
 </style>
 </head>
 <body>
+
+<div class="event-alert" data-wine-event>
+  Taste of Spain Wine Tasting · 24 พฤศจิกายน · ที่นั่งมีจำนวนจำกัด — <a href="#wine-tasting">ดูรายละเอียดและจอง</a>
+</div>
 
 <header>
   <div class="wrap hdr">
@@ -428,6 +475,30 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
     </div>
   </div>
 </div>
+
+<!-- ===== TASTE OF SPAIN WINE TASTING ===== -->
+<section class="wine-event" id="wine-tasting" data-wine-event>
+  <div class="wrap wine-event-grid">
+    <figure class="wine-event-media">
+      <img src="images/wine-tasting-2026-11-24.jpg" alt="Taste of Spain Wine Tasting วันที่ 24 พฤศจิกายน 2026 ที่ Owl's Nest Bar & Bistro" width="1200" height="1200">
+    </figure>
+    <div class="wine-event-copy">
+      <div class="eyebrow">Limited Wine Experience</div>
+      <h2>Taste of Spain<span>Wine Tasting</span></h2>
+      <p>สัมผัสไวน์สเปน 7 ชนิดจาก 7 แคว้น พร้อมบรรยากาศอบอุ่นและอาหารทานคู่ไวน์ที่ OWL'S NEST</p>
+      <div class="event-facts">
+        <div class="event-fact"><strong>24 พฤศจิกายน 2026</strong>เวลา 19:00–21:00 น.</div>
+        <div class="event-fact"><strong>ไวน์ 7 ชนิด · 7 แคว้น</strong>จำนวนที่นั่งมีจำกัด</div>
+      </div>
+      <div class="event-price">2,500 บาท <small>ต่อโต๊ะ สำหรับ 2 ท่าน</small></div>
+      <div class="cta-row">
+        <a href="/booking/?event=wine-tasting-2026-11-24" class="btn btn-solid">จอง Wine Tasting</a>
+        <a href="images/wine-tasting-list-2026-11-24.png" class="btn btn-ghost" target="_blank" rel="noopener">ดูรายชื่อไวน์ทั้ง 7</a>
+      </div>
+      <small class="event-note">ส่งคำขอผ่านเว็บไซต์แล้วรอทีมงานติดต่อยืนยันอีกครั้ง</small>
+    </div>
+  </div>
+</section>
 
 <!-- ===== ONLINE BOOKING PROMOTION ===== -->
 <section class="booking-promo" id="booking-promotion">
@@ -907,6 +978,11 @@ footer p{color:#5f5a54;font-size:12.5px;margin:6px 0}
 <!-- Meta Pixel: เก็บพฤติกรรมสำคัญของลูกค้า -->
 <script>
 (function () {
+  var eventEnds = Date.parse('2026-11-25T00:00:00+07:00');
+  if (Date.now() >= eventEnds) {
+    document.querySelectorAll('[data-wine-event]').forEach(function (el) { el.remove(); });
+  }
+
   if (!window.fbq) return;
 
   document.addEventListener('click', function (e) {

@@ -35,6 +35,13 @@ BASE_PATH = "/booking"
 TZ = ZoneInfo("Asia/Bangkok")
 SESSION_HOURS = 24 * 14
 VALID_STATUSES = {"pending", "confirmed", "no_answer", "cancelled", "seated", "completed", "no_show"}
+EVENT_BOOKINGS = {
+    "wine-tasting-2026-11-24": {
+        "date": "2026-11-24",
+        "time": "19:00",
+        "label": "Wine Tasting · 24 Nov 2026",
+    }
+}
 RATE_LIMIT = {}
 MIN_FILL_SECONDS = 3
 
@@ -208,6 +215,21 @@ def validate_booking(body):
         channel = "phone"
     note = str(body.get("note", "")).strip()[:500]
     return booking_date.isoformat(), booking_time, party_size, preference, name, phone, channel, note
+
+def prepare_booking(body):
+    event_key = str(body.get("event", "")).strip()
+    if not event_key:
+        return validate_booking(body)
+    event = EVENT_BOOKINGS.get(event_key)
+    if not event:
+        raise ValueError("ไม่พบกิจกรรมที่เลือก")
+    event_body = dict(body)
+    event_body["date"] = event["date"]
+    event_body["time"] = event["time"]
+    values = list(validate_booking(event_body))
+    customer_note = values[-1]
+    values[-1] = f"[{event['label']}]" + (f" {customer_note}" if customer_note else "")
+    return tuple(values)
 
 def booking_code(booking_date):
     return "OWL-" + booking_date.replace("-", "")[2:] + "-" + secrets.token_hex(2).upper()
@@ -426,7 +448,7 @@ class Handler(BaseHTTPRequestHandler):
             if limited(self.client_ip()):
                 return self.send(HTTPStatus.TOO_MANY_REQUESTS, {"error": "ส่งคำขอหลายครั้งเกินไป กรุณารอสักครู่"})
             try:
-                values = validate_booking(body)
+                values = prepare_booking(body)
             except ValueError as exc:
                 return self.send(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
             reasons = spam_reasons(body, values)
