@@ -43,6 +43,13 @@ class BookingValidationTests(unittest.TestCase):
         body = self.good(); body["event"] = "unknown"
         with self.assertRaisesRegex(ValueError, "ไม่พบกิจกรรม"):
             app.prepare_booking(body)
+
+    def test_booking_page_contains_room_guides(self):
+        html = app.public_ui()
+        self.assertIn("Zone.1 VIP Private Room (7–10 ท่าน)", html)
+        self.assertIn("Zone.2 Karaoke Room 2nd Floor (8–15 ท่าน)", html)
+        self.assertIn("/images/zone-1-vip-private-room.jpg", html)
+        self.assertIn("/images/zone-2-karaoke-room.jpg", html)
     def test_invalid_time(self):
         body = self.good(); body["time"] = "16:30"
         with self.assertRaisesRegex(ValueError, "17:00"):
