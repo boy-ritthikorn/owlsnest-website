@@ -1,12 +1,22 @@
 {
   "music": [
     {
+      "en": "Monday",
+      "th": "คืนวันจันทร์",
+      "slots": [
+        {
+          "genre": "Flamingo",
+          "time": "20:30 – 22:00"
+        }
+      ]
+    },
+    {
       "en": "Tuesday",
       "th": "คืนวันอังคาร",
       "slots": [
         {
-          "genre": "BLUES GROUP",
-          "time": "20:30 – 22:30"
+          "genre": "Bossa / Blue / Jazz",
+          "time": "20:30 – 22:00"
         }
       ]
     },
@@ -15,7 +25,7 @@
       "th": "คืนวันพุธ",
       "slots": [
         {
-          "genre": "Acoustic Rock",
+          "genre": "Acoustic Rock / Pop Indy Rock",
           "time": "20:30 – 22:30"
         }
       ]
@@ -49,8 +59,22 @@
       "th": "คืนวันเสาร์",
       "slots": [
         {
-          "genre": "BLUES ROCK",
-          "time": "21:30 – 23:30"
+          "genre": "Pop Rock",
+          "time": "20:30 – 22:00"
+        },
+        {
+          "genre": "Blue Rock",
+          "time": "22:30 – 00:00"
+        }
+      ]
+    },
+    {
+      "en": "Sunday",
+      "th": "คืนวันอาทิตย์",
+      "slots": [
+        {
+          "genre": "90’s / Pop / Acoustic",
+          "time": "20:30 – 23:00"
         }
       ]
     }
